@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+
 
 // --- HELPER COMPONENT: Scroll Reveal Animation ---
 const RevealOnScroll = ({ children, delay = 0 }) => {
@@ -48,21 +50,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
       
-      {/* --- NAVBAR --- */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">Q</span>
-            </div>
-            <span className="font-semibold text-xl tracking-tight">QuietCare AI</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/signin" className="text-sm font-medium hover:text-gray-600 transition">Log in</Link>
-            <Link to="/signup" className="bg-black text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-800 transition">Sign up</Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar page="home" />
 
       {/* --- HERO SECTION --- */}
       <main className="pt-40 pb-20 px-6 max-w-4xl mx-auto text-center">
@@ -197,7 +185,7 @@ const Home = () => {
             onMouseEnter={() => setHoveredLogo(true)}
             onMouseLeave={() => setHoveredLogo(false)}
           >
-            <h2 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold text-white leading-none tracking-tight transition-all duration-500">
+            <h2 className="text-7xl sm:text-7xl md:text-8xl lg:text-[13rem] font-bold text-white leading-none tracking-tight transition-all duration-500">
               {hoveredLogo ? <Link to="/signup" className="text-blue-400 no-underline">Try Now →</Link> : 'QuietCare AI'}
             </h2>
           </div>
