@@ -5,22 +5,21 @@ const cors = require('cors');
 
 const app = express();
 
-// Middleware (Allows frontend to talk to backend)
+// Middleware
 app.use(express.json());
 app.use(cors());
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/quietcare_ai')
-  .then(() => console.log('✅ MongoDB Connected Successfully'))
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+  .then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => console.log(err));
 
-// Simple Route to Test Server
-app.get('/', (req, res) => {
-  res.send('QuietCare AI Backend is Running...');
-});
+// --- ROUTES ---
+// 1. Auth Routes (Placeholder for now)
+app.use('/api/auth', require('./routes/authRoutes'));
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// 2. Test Routes (RUN THIS TO CHECK MODELS)
+app.use('/api/test', require('./routes/testRoutes'));
+
+const PORT = 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
