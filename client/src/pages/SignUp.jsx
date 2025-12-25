@@ -1,7 +1,8 @@
-// src/pages/SignUp.jsx
 import React from 'react';
 import Navbar from '../components/Navbar';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; // Import Toast logic
 
 const SignUp = () => {
   const { 
@@ -10,18 +11,61 @@ const SignUp = () => {
     watch, 
     formState: { errors } 
   } = useForm({
-    mode: "all"
+    mode: "all" // Validates as you type
   });
 
-  const onSubmit = (data) => {
-    console.log("Form Data Submitted:", data);
-    alert("Sign Up Successful! (Check console for data)");
+  const navigate = useNavigate();
+
+  // --- SUBMIT FUNCTION (Connects to Backend) ---
+  const onSubmit = async (data) => {
+    // 1. Show a loading toast
+    const loadingToast = toast.loading("Creating your account...");
+
+    try {
+        // 2. Send data to Backend
+        const response = await fetch('http://localhost:5000/api/auth/signup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: data.username,
+                email: data.email,
+                password: data.password
+            }),
+        });
+
+        const result = await response.json();
+
+        // 3. Remove the loading toast
+        toast.dismiss(loadingToast);
+
+        if (response.ok) {
+            // SUCCESS: Show green toast & Redirect
+            toast.success("✅ Account created! Welcome to QuietCare AI.");
+            
+            // Wait 2 seconds so user can read the message, then go to Chat
+            setTimeout(() => {
+                navigate('/chat');
+            }, 2000);
+            
+        } else {
+            // ERROR: Show red toast with message from Backend (e.g. "User exists")
+            toast.error(result.message || "Something went wrong.");
+        }
+    } catch (error) {
+        toast.dismiss(loadingToast);
+        console.error("Connection Error:", error);
+        toast.error("❌ Server connection failed. Is Backend running?");
+    }
   };
+  // ---------------------------------------------
 
   const password = watch("password");
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      {/* Navbar: Hides 'Sign Up' button, shows 'Log In' */}
       <Navbar page="signup" />
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 pt-20 pb-10">
@@ -31,7 +75,7 @@ const SignUp = () => {
 
             <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-3" noValidate>
                 
-                {/* Username */}
+                {/* Username Input */}
                 <div className="relative">
                     <input 
                         type="text" 
@@ -41,14 +85,10 @@ const SignUp = () => {
                             errors.username ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-green-600'
                         }`}
                     />
-                    {errors.username && (
-                        <p className="text-red-500 text-xs mt-1 text-left w-full">
-                            {errors.username.message}
-                        </p>
-                    )}
+                    {errors.username && <p className="text-red-500 text-xs mt-1 w-full text-left">{errors.username.message}</p>}
                 </div>
 
-                {/* Email */}
+                {/* Email Input */}
                 <div className="relative">
                     <input 
                         type="email" 
@@ -64,14 +104,10 @@ const SignUp = () => {
                             errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-green-600'
                         }`}
                     />
-                    {errors.email && (
-                        <p className="text-red-500 text-xs mt-1 text-left w-full">
-                            {errors.email.message}
-                        </p>
-                    )}
+                    {errors.email && <p className="text-red-500 text-xs mt-1 w-full text-left">{errors.email.message}</p>}
                 </div>
 
-                {/* Password */}
+                {/* Password Input */}
                 <div className="relative">
                     <input 
                         type="password" 
@@ -84,14 +120,10 @@ const SignUp = () => {
                             errors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-green-600'
                         }`}
                     />
-                    {errors.password && (
-                        <p className="text-red-500 text-xs mt-1 text-left w-full">
-                            {errors.password.message}
-                        </p>
-                    )}
+                    {errors.password && <p className="text-red-500 text-xs mt-1 w-full text-left">{errors.password.message}</p>}
                 </div>
 
-                 {/* Confirm Password */}
+                 {/* Confirm Password Input */}
                  <div className="relative">
                     <input 
                         type="password" 
@@ -104,11 +136,7 @@ const SignUp = () => {
                             errors.confirmPassword ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-green-600'
                         }`}
                     />
-                    {errors.confirmPassword && (
-                        <p className="text-red-500 text-xs mt-1 text-left w-full">
-                            {errors.confirmPassword.message}
-                        </p>
-                    )}
+                    {errors.confirmPassword && <p className="text-red-500 text-xs mt-1 w-full text-left">{errors.confirmPassword.message}</p>}
                 </div>
 
                 {/* Submit Button */}
@@ -120,15 +148,15 @@ const SignUp = () => {
                 </button>
             </form>
 
+            {/* Divider */}
             <div className="w-full flex items-center gap-4 my-6">
                 <div className="h-px bg-gray-300 flex-1"></div>
                 <span className="text-gray-500 text-sm">OR</span>
                 <div className="h-px bg-gray-300 flex-1"></div>
             </div>
 
-            {/* Social Buttons with RESTORED SVGs */}
+            {/* Social Buttons */}
             <div className="w-full flex flex-col gap-3">
-                
                 {/* Google Button */}
                 <button className="w-full border border-gray-300 rounded-lg p-3 flex items-center justify-center gap-3 hover:bg-gray-50 transition">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">

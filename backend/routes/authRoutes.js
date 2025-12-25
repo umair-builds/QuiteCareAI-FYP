@@ -1,13 +1,10 @@
 const express = require('express');
 const router = express.Router();
+// Import the controller
+const authController = require('../controllers/authController');
 
-// Skeleton Routes (We will add real logic later)
-router.post('/signup', (req, res) => {
-  res.json({ message: "Signup route working" });
-});
-
-router.post('/signin', (req, res) => {
-  res.json({ message: "Signin route working" });
-});
+// Link the URL to the Controller Function
+router.post('/signup', authController.signup);
+router.post('/signin', authController.signin);
 
 module.exports = router;
