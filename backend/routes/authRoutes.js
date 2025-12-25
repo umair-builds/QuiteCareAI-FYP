@@ -7,4 +7,10 @@ const authController = require('../controllers/authController');
 router.post('/signup', authController.signup);
 router.post('/signin', authController.signin);
 
+// --- ADD THESE ---
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
+
+module.exports = router;
+
 module.exports = router;

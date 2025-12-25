@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 const MainChat = () => {
   return (
     <div>
-      <Navbar />
+      <Navbar page="chat" />
       <div style={{ display: 'flex', height: '90vh' }}>
         
         {/* Left Side: Chat History */}
