@@ -1,0 +1,47 @@
+QuietCare-Project/
+├── backend/              # (Server Side Code)
+│   ├── .env              # (Secrets: Mongo URI, JWT Secret, Email Pass)
+│   ├── package.json      # (Backend dependencies: express, mongoose, etc.)
+│   ├── server.js         # (Main Entry Point: Runs on Port 5000)
+│   ├── models/           # (Database Schemas)
+│   │   ├── User.js       # (Stores Name, Email, Password)
+│   │   └── Chat.js       # (Stores Chat History)
+│   ├── routes/           # (API Endpoints)
+│   │   ├── auth.js       # (Login, Signup, Forgot Password routes)
+│   │   └── chat.js       # (Save/Get Chat History routes)
+│   └── controllers/      # (Logic for Routes)
+│       └── authController.js
+│
+└── client/
+	├── index.html            # (Main HTML file)
+	├── vite.config.js        # (Vite Settings)	
+	├── tailwind.config.js    # (Tailwind Settings)
+	├── package.json          # (Frontend dependencies: react, redux, 	lucide, etc.)
+	└── src/
+  	  ├── main.jsx          # (React Entry Point)
+  	  ├── App.jsx           # (Router: Defines /signin, /chat paths)
+  	  ├── index.css         # (Tailwind imports)
+  	  │
+    	├── app/              # (Redux Store Setup)
+   	 │   └── store.js      # (Configures the global store)
+   	 │
+   	 ├── features/         # (Redux Slices)
+    	│   └── auth/
+    	│       └── authSlice.js  # (Handles Login/Logout & LocalStorage)
+    	│
+    	├── components/       # (Reusable UI parts)
+    	│   ├── Navbar.jsx       # (Global Top Bar - Smart "Log In" vs "Profile")
+    	│   ├── Sidebar.jsx      # (Chat History + Fixed "New Session" button)
+    	│   ├── VideoStage.jsx   # (Split View: Webcam + Avatar)
+    	│   ├── ControlPanel.jsx # (Buttons: Start, Pause, Enter)
+    	│   └── ChatLog.jsx      # (Text Conversation Box)
+    	│
+    	└── pages/            # (Full Page Views)
+       		├── Home.jsx           # (Landing Page with Marquee)
+        	├── SignIn.jsx         # (Login Page)
+        	├── SignUp.jsx         # (Registration Page)
+        	├── ForgotPassword.jsx # (Email Input)
+        	├── ResetPassword.jsx  # (New Password Input)
+        	└── MainChat.jsx       # (The "Tool": Combines all components above)
+
+
