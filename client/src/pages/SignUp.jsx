@@ -4,6 +4,10 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify'; // Import Toast logic
 
+// --- 1. NEW LOGIC IMPORTS ---
+import { useDispatch } from 'react-redux';
+import { login } from '../features/auth/authSlice';
+
 const SignUp = () => {
   const { 
     register, 
@@ -15,6 +19,7 @@ const SignUp = () => {
   });
 
   const navigate = useNavigate();
+  const dispatch = useDispatch(); // --- 2. SETUP DISPATCH ---
 
   // --- SUBMIT FUNCTION (Connects to Backend) ---
   const onSubmit = async (data) => {
@@ -41,6 +46,11 @@ const SignUp = () => {
         toast.dismiss(loadingToast);
 
         if (response.ok) {
+            // --- 3. AUTO-LOGIN LOGIC (The only change) ---
+            // This fixes the empty Navbar issue
+            localStorage.setItem('user', JSON.stringify(result)); 
+            dispatch(login(result)); 
+
             // SUCCESS: Show green toast & Redirect
             toast.success("✅ Account created! Welcome to QuietCare AI.");
             

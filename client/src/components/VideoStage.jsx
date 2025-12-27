@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Bot, Activity } from 'lucide-react';
 import axios from 'axios';
 
+// [NEW] Import the video file
+import welcomeVideo from '../assets/welcome.mp4'; 
+
 const VideoStage = ({ isRecording, onGlossDetected }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -10,7 +13,7 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
   // Track recording state
   const isRecordingRef = useRef(isRecording);
   
-  // [NEW] Track if Python is busy to prevent Lag
+  // Track busy state to prevent lag
   const isBusyRef = useRef(false);
 
   useEffect(() => {
@@ -35,31 +38,26 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
     startWebcam();
   }, []);
 
-  // 2. The "Smart Loop" (Drops frames if busy = NO LAG)
+  // 2. The "Smart Loop" (No Lag)
   useEffect(() => {
     let intervalId;
 
     if (isRecording && cameraActive) {
       intervalId = setInterval(async () => {
-        // STOP if recording turned off
         if (!isRecordingRef.current) return;
-
-        // CRITICAL: If Python is still working on the last frame, SKIP this one.
-        if (isBusyRef.current) return; 
+        if (isBusyRef.current) return; // Skip frame if busy
 
         if (videoRef.current && canvasRef.current) {
-          isBusyRef.current = true; // Mark as busy
+          isBusyRef.current = true;
 
           const video = videoRef.current;
           const canvas = canvasRef.current;
           const context = canvas.getContext('2d');
 
-          // Capture
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          // Convert & Send
           canvas.toBlob(async (blob) => {
             if (blob) {
               const formData = new FormData();
@@ -75,16 +73,16 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
                   onGlossDetected(response.data.gloss);
                 }
               } catch (error) {
-                console.error("Frame dropped (Server busy or error)");
+                console.error("Frame dropped (Server busy)");
               } finally {
-                isBusyRef.current = false; // Mark as free for next frame
+                isBusyRef.current = false;
               }
             } else {
               isBusyRef.current = false;
             }
           }, 'image/jpeg', 0.8);
         }
-      }, 30); // Try to run at 30ms (33 FPS)
+      }, 30); 
     }
 
     return () => clearInterval(intervalId);
@@ -94,7 +92,7 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
     <div className="flex flex-col md:flex-row gap-4 h-[350px] w-full mb-6">
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* User Webcam */}
+      {/* Left: User Webcam */}
       <div className={`flex-1 rounded-xl overflow-hidden relative shadow-md border-2 transition-colors ${isRecording ? 'border-red-500' : 'border-gray-200'}`}>
         <div className="bg-black w-full h-full">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
@@ -111,11 +109,23 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
         </div>
       </div>
 
-      {/* Avatar Output */}
-      <div className="flex-1 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex flex-col items-center justify-center relative shadow-md border border-gray-200">
-        <Bot size={48} className="text-gray-300 mb-2" />
-        <p className="text-gray-500 text-sm font-medium">Avatar Animation</p>
-        <p className="text-gray-400 text-xs">(Blender Render)</p>
+      {/* Right: Avatar Output (UPDATED) */}
+      <div className="flex-1 bg-gray-100 rounded-xl flex flex-col items-center justify-center relative shadow-md border border-gray-200 overflow-hidden">
+        
+        {/* [NEW] The Welcome Video */}
+        <video 
+          src={welcomeVideo} 
+          autoPlay 
+          playsInline
+          // Removed 'loop' so it stops when done
+          // Removed 'controls' so user can't stop it
+          className="w-full h-full object-cover"
+        />
+
+        {/* Badge Overlay */}
+        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2 py-1 rounded flex items-center gap-1 shadow-sm">
+          <Bot size={12} /> <span>AI Assistant</span>
+        </div>
       </div>
     </div>
   );
