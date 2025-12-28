@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Bot } from 'lucide-react'; 
 
-// Import Components
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import VideoStage from '../components/VideoStage';
@@ -18,30 +17,45 @@ const MainChat = () => {
     { sender: 'bot', text: 'Hello! Press START to begin signing.' }
   ]);
 
+  // [NEW] Logic Flag: Tracks if the text in the bar is from the AI
+  const [isAiOutput, setIsAiOutput] = useState(false);
+
   // --- HANDLERS ---
   const handleNewSession = () => {
     setSessionStarted(true);
     setIsRecording(false);
     setCurrentGlosses([]);
+    setIsAiOutput(false); // Reset flag
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
   const handleGlossDetected = (newGloss) => {
+    // If we start signing, assume it's user input (safety check)
+    if (isAiOutput) {
+        setIsAiOutput(false);
+        setCurrentGlosses([]);
+    }
+
     setCurrentGlosses((prev) => {
         if (prev.length > 0 && prev[prev.length - 1] === newGloss) return prev;
         return [...prev, newGloss];
     });
   };
 
-  // Allow manual editing of the blue bar
   const handleManualEdit = (e) => {
+    // [FIX] If it is AI output, DO NOT allow editing
+    if (isAiOutput) return; 
+
     const newText = e.target.value;
     setCurrentGlosses(newText ? newText.split(" ") : []);
   };
 
   const handleStart = () => {
+    // [FIX] When START is clicked, always CLEAR the bar and RESET flags
     setIsRecording(true);
-    console.log("Recording Started");
+    setIsAiOutput(false); 
+    setCurrentGlosses([]); 
+    console.log("Recording Started - Session Cleared");
   };
 
   const handlePause = () => {
@@ -51,72 +65,85 @@ const MainChat = () => {
 
   const handleRetake = () => {
     setIsRecording(false);
+    setIsAiOutput(false);
     setCurrentGlosses([]);
     console.log("Session Cleared");
   };
 
-  // --- THE FIXED TRANSLATION LOGIC ---
+  // --- THE FULL CONVERSATION LOGIC ---
   const handleEnter = async () => {
     setIsRecording(false); 
     
+    // [FIX] If the text currently shown is AI Output, ignore the Enter click.
+    if (isAiOutput) return;
+    
     if (currentGlosses.length === 0) return;
 
-    // 1. Prepare Gloss Text
+    // 1. Prepare User's Gloss
     const rawGlossText = currentGlosses.join(" ");
     
-    // 2. Show "Translating..." immediately so user knows it's working
-    setMessages(prev => [...prev, { sender: 'user', text: `[${rawGlossText}] ... Translating ⏳` }]);
+    // [UX] Show "Translating" without emoji
+    setMessages(prev => [...prev, { sender: 'user', text: `[${rawGlossText}] ... Translating` }]);
 
     try {
       const formData = new FormData();
       formData.append('gloss_text', rawGlossText);
 
-      // 3. Send to Python Brain
-      const response = await axios.post('http://127.0.0.1:8000/translate', formData, {
+      // 2. STEP A: Get English Sentence
+      const transResponse = await axios.post('http://127.0.0.1:8000/translate', formData, {
          headers: { 'Content-Type': 'multipart/form-data' }
       });
+      const userSentence = transResponse.data.sentence;
 
-      // 4. Get the Perfect Sentence
-      const finalSentence = response.data.sentence;
-
-      // 5. SWAP the "Translating..." message with the Final Sentence
       setMessages(prev => {
         const newLog = [...prev];
-        newLog.pop(); // Remove the "Translating..." bubble
-        newLog.push({ sender: 'user', text: finalSentence }); // Insert the Real Sentence
+        newLog.pop(); 
+        newLog.push({ sender: 'user', text: userSentence });
+        // [UX] Show "Thinking" without emoji
+        newLog.push({ sender: 'bot', text: "Thinking..." }); 
         return newLog;
       });
       
-      // Clear the gloss bar for the next sentence
-      setCurrentGlosses([]);
+      // 3. STEP B: Get Bot Response
+      const chatFormData = new FormData();
+      chatFormData.append('user_text', userSentence);
 
-    } catch (err) {
-      console.error("Translation Error:", err);
-      
-      // 6. ERROR HANDLING: If server fails, keep the Gloss and show error
+      const botResponse = await axios.post('http://127.0.0.1:8000/chat-response', chatFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const { reply, gloss } = botResponse.data;
+
       setMessages(prev => {
         const newLog = [...prev];
-        newLog.pop(); // Remove "Translating..."
-        newLog.push({ sender: 'user', text: rawGlossText }); // Keep the Gloss (don't lose user data)
-        newLog.push({ sender: 'bot', text: "⚠️ AI Brain is offline. Could not translate." });
+        newLog.pop(); 
+        newLog.push({ sender: 'bot', text: reply });
         return newLog;
+      });
+
+      // Display AI Gloss and LOCK it
+      setCurrentGlosses(gloss.split(" "));
+      setIsAiOutput(true); 
+
+    } catch (err) {
+      console.error("Error:", err);
+      setMessages(prev => {
+         const newLog = [...prev];
+         if(newLog[newLog.length-1].text.includes("Thinking") || newLog[newLog.length-1].text.includes("Translating")) {
+             newLog.pop();
+         }
+         newLog.push({ sender: 'bot', text: "Connection Error" });
+         return newLog;
       });
     }
   };
 
   return (
     <div className="flex flex-col h-screen bg-white font-sans text-gray-900">
-      
       <Navbar page="chat" />
-
-      {/* Main Workspace */}
       <div className="flex flex-1 overflow-hidden pt-20">
-        
         <Sidebar onNewSession={handleNewSession} />
-
         <div className="flex-1 flex flex-col relative h-full">
-          
-          {/* Header */}
           <div className="h-10 border-b border-gray-100 flex items-center justify-between px-4 bg-white shrink-0">
             <h2 className="font-semibold text-sm text-gray-800">
                 {sessionStarted ? "Current Session" : "Welcome"}
@@ -129,19 +156,13 @@ const MainChat = () => {
             </div>
           </div>
 
-          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
             <div className="max-w-5xl mx-auto flex flex-col h-full">
-              
               {sessionStarted ? (
                 <>
-                  {/* VIDEO AREA */}
-                  <VideoStage 
-                     isRecording={isRecording} 
-                     onGlossDetected={handleGlossDetected} 
-                  />
+                  <VideoStage isRecording={isRecording} onGlossDetected={handleGlossDetected} />
                   
-                  {/* LIVE GLOSS PREVIEW BAR (EDITABLE) */}
+                  {/* LIVE GLOSS PREVIEW BAR */}
                   <div className="mb-2 text-center px-4">
                      {isRecording ? (
                         // RECORDING MODE: Read-Only Blue Badge
@@ -149,18 +170,27 @@ const MainChat = () => {
                             {currentGlosses.length > 0 ? currentGlosses.join(" ") : "Waiting for signs..."}
                         </span>
                      ) : (
-                        // PAUSED MODE: Editable White Input
+                        // PAUSED MODE: 
+                        // If isAiOutput is TRUE -> Grey Box (Locked)
+                        // If isAiOutput is FALSE -> White Box (Editable)
                         <div className="relative w-full">
                             <input 
                                 type="text" 
                                 value={currentGlosses.join(" ")}
                                 onChange={handleManualEdit}
-                                placeholder="Type or correct signs here..."
-                                className="w-full bg-white text-gray-800 px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center transition-all"
+                                disabled={isAiOutput} // [FIX] Disable typing if it's AI output
+                                placeholder={isAiOutput ? "AI Response (Click Start to reply)" : "Type or correct signs here..."}
+                                className={`w-full px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${
+                                    isAiOutput 
+                                    ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' // Locked Style
+                                    : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500' // Editable Style
+                                }`}
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
-                                EDIT MODE
-                            </span>
+                            {!isAiOutput && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
+                                    EDIT MODE
+                                </span>
+                            )}
                         </div>
                      )}
                   </div>
@@ -172,29 +202,21 @@ const MainChat = () => {
                     onRetake={handleRetake}
                     onClose={() => setSessionStarted(false)}
                   />
-                  
                   <ChatLog messages={messages} />
                 </>
               ) : (
-                <>
-                  {/* WELCOME SCREEN */}
-                  <div className="h-full flex flex-col items-center justify-center text-center opacity-60 pb-20">
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-60 pb-20">
                     <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-200 mb-6">
                         <Bot size={32} className="text-gray-400" />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-800 mb-2">QuietCare AI</h1>
                     <p className="text-sm text-gray-500 max-w-md leading-relaxed">
-                        Please click the 
-                        <span className="font-bold text-gray-700 mx-1">"New Session"</span> 
-                        button in the sidebar.
+                        Please click the <span className="font-bold text-gray-700 mx-1">"New Session"</span> button.
                     </p>
-                  </div>
-                </>
+                </div>
               )}
-
             </div>
           </div>
-
         </div>
       </div>
     </div>

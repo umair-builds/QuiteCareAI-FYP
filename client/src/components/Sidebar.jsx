@@ -37,19 +37,6 @@ const Sidebar = ({ onNewSession }) => {
         ))}
       </div>
 
-      {/* --- FOOTER: USER PROFILE --- */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-200 cursor-pointer transition-colors">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-            QC
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">QuietCare User</p>
-            <p className="text-xs text-gray-500 truncate">Free Plan</p>
-          </div>
-        </div>
-      </div>
-
     </div>
   );
 };
