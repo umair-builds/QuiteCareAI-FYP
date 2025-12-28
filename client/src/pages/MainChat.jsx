@@ -196,6 +196,7 @@ const MainChat = () => {
                   </div>
 
                   <ControlPanel 
+                    isRecording={isRecording}
                     onStart={handleStart}
                     onPause={handlePause}
                     onEnter={handleEnter}

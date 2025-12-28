@@ -24,7 +24,7 @@ const ChatLog = ({ messages }) => {
             <div key={idx} className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
                <div className={`max-w-[80%] px-4 py-2 text-sm shadow-sm transition-all duration-300 ${
                   isUser 
-                    ? 'bg-blue-600 text-white rounded-2xl rounded-tl-none' // User
+                    ? 'bg-[#10a37f] text-white rounded-2xl rounded-tl-none' // User
                     : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tr-none' // Bot
                   } ${
                     // [UX] Apply the "Sunlight/Pulse" Animation if loading
