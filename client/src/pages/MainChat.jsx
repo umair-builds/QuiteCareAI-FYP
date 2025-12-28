@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Bot } from 'lucide-react'; 
+import { useSelector } from 'react-redux';
 
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -9,6 +10,8 @@ import ControlPanel from '../components/ControlPanel';
 import ChatLog from '../components/ChatLog';
 
 const MainChat = () => {
+  const { user } = useSelector((state) => state.auth);
+
   // --- STATE ---
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -16,8 +19,6 @@ const MainChat = () => {
   const [messages, setMessages] = useState([
     { sender: 'bot', text: 'Hello! Press START to begin signing.' }
   ]);
-
-  // [NEW] Logic Flag: Tracks if the text in the bar is from the AI
   const [isAiOutput, setIsAiOutput] = useState(false);
 
   // --- HANDLERS ---
@@ -25,17 +26,37 @@ const MainChat = () => {
     setSessionStarted(true);
     setIsRecording(false);
     setCurrentGlosses([]);
-    setIsAiOutput(false); // Reset flag
+    setIsAiOutput(false);
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
+  // [NEW] Load Old Session Function
+  const handleLoadSession = async (chatId) => {
+    try {
+      console.log("Loading chat:", chatId);
+      const res = await axios.get(`http://localhost:5000/api/chat/${chatId}`);
+      
+      // 1. Update Messages
+      setMessages(res.data.messages);
+      
+      // 2. Open the Session View
+      setSessionStarted(true);
+      
+      // 3. Reset Recording State (Safety)
+      setIsRecording(false);
+      setCurrentGlosses([]);
+      setIsAiOutput(false);
+      
+    } catch (err) {
+      console.error("Error loading session:", err);
+    }
+  };
+
   const handleGlossDetected = (newGloss) => {
-    // If we start signing, assume it's user input (safety check)
     if (isAiOutput) {
         setIsAiOutput(false);
         setCurrentGlosses([]);
     }
-
     setCurrentGlosses((prev) => {
         if (prev.length > 0 && prev[prev.length - 1] === newGloss) return prev;
         return [...prev, newGloss];
@@ -43,53 +64,58 @@ const MainChat = () => {
   };
 
   const handleManualEdit = (e) => {
-    // [FIX] If it is AI output, DO NOT allow editing
     if (isAiOutput) return; 
-
     const newText = e.target.value;
     setCurrentGlosses(newText ? newText.split(" ") : []);
   };
 
   const handleStart = () => {
-    // [FIX] When START is clicked, always CLEAR the bar and RESET flags
     setIsRecording(true);
     setIsAiOutput(false); 
     setCurrentGlosses([]); 
-    console.log("Recording Started - Session Cleared");
   };
 
   const handlePause = () => {
     setIsRecording(false);
-    console.log("Recording Paused");
   };
 
   const handleRetake = () => {
     setIsRecording(false);
     setIsAiOutput(false);
     setCurrentGlosses([]);
-    console.log("Session Cleared");
   };
 
-  // --- THE FULL CONVERSATION LOGIC ---
+  const handleCloseSession = async () => {
+    if (sessionStarted && user && messages.length > 1) {
+      try {
+        await axios.post('http://localhost:5000/api/chat/save', {
+          userId: user.id || user._id, 
+          messages: messages
+        });
+        console.log("Session Saved!");
+      } catch (error) {
+        console.error("Failed to save chat:", error);
+      }
+    }
+    setSessionStarted(false);
+    setIsRecording(false);
+    setIsAiOutput(false);
+    setCurrentGlosses([]);
+    setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
+  };
+
   const handleEnter = async () => {
     setIsRecording(false); 
-    
-    // [FIX] If the text currently shown is AI Output, ignore the Enter click.
     if (isAiOutput) return;
-    
     if (currentGlosses.length === 0) return;
 
-    // 1. Prepare User's Gloss
     const rawGlossText = currentGlosses.join(" ");
-    
-    // [UX] Show "Translating" without emoji
     setMessages(prev => [...prev, { sender: 'user', text: `[${rawGlossText}] ... Translating` }]);
 
     try {
       const formData = new FormData();
       formData.append('gloss_text', rawGlossText);
 
-      // 2. STEP A: Get English Sentence
       const transResponse = await axios.post('http://127.0.0.1:8000/translate', formData, {
          headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -99,12 +125,10 @@ const MainChat = () => {
         const newLog = [...prev];
         newLog.pop(); 
         newLog.push({ sender: 'user', text: userSentence });
-        // [UX] Show "Thinking" without emoji
         newLog.push({ sender: 'bot', text: "Thinking..." }); 
         return newLog;
       });
       
-      // 3. STEP B: Get Bot Response
       const chatFormData = new FormData();
       chatFormData.append('user_text', userSentence);
 
@@ -121,7 +145,6 @@ const MainChat = () => {
         return newLog;
       });
 
-      // Display AI Gloss and LOCK it
       setCurrentGlosses(gloss.split(" "));
       setIsAiOutput(true); 
 
@@ -142,7 +165,12 @@ const MainChat = () => {
     <div className="flex flex-col h-screen bg-white font-sans text-gray-900">
       <Navbar page="chat" />
       <div className="flex flex-1 overflow-hidden pt-20">
-        <Sidebar onNewSession={handleNewSession} />
+        {/* [CHANGE] Pass the new function to Sidebar */}
+        <Sidebar 
+            onNewSession={handleNewSession} 
+            onLoadSession={handleLoadSession} 
+        />
+        
         <div className="flex-1 flex flex-col relative h-full">
           <div className="h-10 border-b border-gray-100 flex items-center justify-between px-4 bg-white shrink-0">
             <h2 className="font-semibold text-sm text-gray-800">
@@ -162,28 +190,23 @@ const MainChat = () => {
                 <>
                   <VideoStage isRecording={isRecording} onGlossDetected={handleGlossDetected} />
                   
-                  {/* LIVE GLOSS PREVIEW BAR */}
                   <div className="mb-2 text-center px-4">
                      {isRecording ? (
-                        // RECORDING MODE: Read-Only Blue Badge
                         <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border border-blue-100 block w-full min-h-[35px] flex items-center justify-center">
                             {currentGlosses.length > 0 ? currentGlosses.join(" ") : "Waiting for signs..."}
                         </span>
                      ) : (
-                        // PAUSED MODE: 
-                        // If isAiOutput is TRUE -> Grey Box (Locked)
-                        // If isAiOutput is FALSE -> White Box (Editable)
                         <div className="relative w-full">
                             <input 
                                 type="text" 
                                 value={currentGlosses.join(" ")}
                                 onChange={handleManualEdit}
-                                disabled={isAiOutput} // [FIX] Disable typing if it's AI output
+                                disabled={isAiOutput}
                                 placeholder={isAiOutput ? "AI Response (Click Start to reply)" : "Type or correct signs here..."}
                                 className={`w-full px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${
                                     isAiOutput 
-                                    ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' // Locked Style
-                                    : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500' // Editable Style
+                                    ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                                    : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500'
                                 }`}
                             />
                             {!isAiOutput && (
@@ -201,7 +224,7 @@ const MainChat = () => {
                     onPause={handlePause}
                     onEnter={handleEnter}
                     onRetake={handleRetake}
-                    onClose={() => setSessionStarted(false)}
+                    onClose={handleCloseSession}
                   />
                   <ChatLog messages={messages} />
                 </>
@@ -212,7 +235,7 @@ const MainChat = () => {
                     </div>
                     <h1 className="text-2xl font-bold text-gray-800 mb-2">QuietCare AI</h1>
                     <p className="text-sm text-gray-500 max-w-md leading-relaxed">
-                        Please click the <span className="font-bold text-gray-700 mx-1">"New Session"</span> button.
+                        Please click <span className="font-bold text-gray-700 mx-1">"New Session"</span> or select a history item.
                     </p>
                 </div>
               )}

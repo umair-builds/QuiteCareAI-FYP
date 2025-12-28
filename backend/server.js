@@ -17,7 +17,9 @@ mongoose.connect('mongodb://127.0.0.1:27017/fyp_db')
 
 // Routes
 const authRoutes = require('./routes/authRoutes'); // Ensure path is correct
+const chatRoutes = require('./routes/chatRoutes'); // [ADD THIS]
 app.use('/api/auth', authRoutes);
+app.use('/api/chat', chatRoutes); // [ADD THIS]
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
