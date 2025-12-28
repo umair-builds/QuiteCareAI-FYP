@@ -1,0 +1,17 @@
+# ENV FILES
+.env
+backend/.env
+ai_engine/.env
+client/.env
+
+# NODE
+node_modules/
+
+# PYTHON
+venv/
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
