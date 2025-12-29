@@ -21,34 +21,52 @@ const MainChat = () => {
   ]);
   const [isAiOutput, setIsAiOutput] = useState(false);
 
+  // Track active chat ID
+  const [currentChatId, setCurrentChatId] = useState(null);
+
+  // Track how many times bot has responded
+  const [responseCount, setResponseCount] = useState(0);
+
   // --- HANDLERS ---
   const handleNewSession = () => {
     setSessionStarted(true);
     setIsRecording(false);
     setCurrentGlosses([]);
     setIsAiOutput(false);
+    setResponseCount(0);
+    setCurrentChatId(null); 
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
-  // [NEW] Load Old Session Function
   const handleLoadSession = async (chatId) => {
     try {
       console.log("Loading chat:", chatId);
       const res = await axios.get(`http://localhost:5000/api/chat/${chatId}`);
       
-      // 1. Update Messages
       setMessages(res.data.messages);
-      
-      // 2. Open the Session View
       setSessionStarted(true);
-      
-      // 3. Reset Recording State (Safety)
       setIsRecording(false);
       setCurrentGlosses([]);
       setIsAiOutput(false);
+      setCurrentChatId(chatId); 
+      setResponseCount(0);
       
     } catch (err) {
       console.error("Error loading session:", err);
+    }
+  };
+
+  // [NEW] Logic to clear screen if the ACTIVE session is deleted
+  const handleDeleteActiveSession = (deletedChatId) => {
+    if (currentChatId === deletedChatId) {
+        console.log("Active session deleted. Resetting view.");
+        setSessionStarted(false);
+        setIsRecording(false);
+        setCurrentGlosses([]);
+        setIsAiOutput(false);
+        setCurrentChatId(null);
+        setResponseCount(0);
+        setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
     }
   };
 
@@ -86,7 +104,7 @@ const MainChat = () => {
   };
 
   const handleCloseSession = async () => {
-    if (sessionStarted && user && messages.length > 1) {
+    if (sessionStarted && user && messages.length > 1 && !currentChatId) {
       try {
         await axios.post('http://localhost:5000/api/chat/save', {
           userId: user.id || user._id, 
@@ -96,11 +114,15 @@ const MainChat = () => {
       } catch (error) {
         console.error("Failed to save chat:", error);
       }
+    } else {
+        console.log("Session closed (Old session or empty). Not saving duplicate.");
     }
+
     setSessionStarted(false);
     setIsRecording(false);
     setIsAiOutput(false);
     setCurrentGlosses([]);
+    setCurrentChatId(null);
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
@@ -146,7 +168,8 @@ const MainChat = () => {
       });
 
       setCurrentGlosses(gloss.split(" "));
-      setIsAiOutput(true); 
+      setIsAiOutput(true);
+      setResponseCount(prev => prev + 1);
 
     } catch (err) {
       console.error("Error:", err);
@@ -165,10 +188,12 @@ const MainChat = () => {
     <div className="flex flex-col h-screen bg-white font-sans text-gray-900">
       <Navbar page="chat" />
       <div className="flex flex-1 overflow-hidden pt-20">
-        {/* [CHANGE] Pass the new function to Sidebar */}
+        
+        {/* [UPDATED] Pass the delete handler to Sidebar */}
         <Sidebar 
             onNewSession={handleNewSession} 
             onLoadSession={handleLoadSession} 
+            onSessionDeleted={handleDeleteActiveSession}
         />
         
         <div className="flex-1 flex flex-col relative h-full">
@@ -188,7 +213,11 @@ const MainChat = () => {
             <div className="max-w-5xl mx-auto flex flex-col h-full">
               {sessionStarted ? (
                 <>
-                  <VideoStage isRecording={isRecording} onGlossDetected={handleGlossDetected} />
+                  <VideoStage 
+                    isRecording={isRecording} 
+                    onGlossDetected={handleGlossDetected}
+                    botResponseCount={responseCount} 
+                  />
                   
                   <div className="mb-2 text-center px-4">
                      {isRecording ? (

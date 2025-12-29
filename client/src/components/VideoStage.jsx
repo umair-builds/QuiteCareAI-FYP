@@ -2,20 +2,63 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Bot, Activity } from 'lucide-react';
 import axios from 'axios';
 
-// [NEW] Import the video file
-import welcomeVideo from '../assets/welcome.mp4'; 
+// --- ASSETS ---
+import welcomeVideo from '../assets/welcome.mp4';
 
-const VideoStage = ({ isRecording, onGlossDetected }) => {
+// Import Sign Animations
+import vidEasy from '../assets/animations/EASY.mp4';
+import vidEnough from '../assets/animations/ENOUGH.mp4';
+import vidFeel from '../assets/animations/FEEL.mp4';
+import vidHeavy from '../assets/animations/HEAVY.mp4';
+import vidOther from '../assets/animations/OTHER.mp4';
+import vidPain from '../assets/animations/PAIN.mp4';
+import vidBusy from '../assets/animations/BUSY.mp4';
+import vidAlso from '../assets/animations/ALSO.mp4';
+import vidAttact from '../assets/animations/ATTACK.mp4';
+
+// Master list of videos in order
+const ANIMATION_ASSETS = [
+  vidEasy,   // 0
+  vidEnough, // 1
+  vidFeel,   // 2
+  vidHeavy,  // 3
+  vidOther,  // 4
+  vidPain,   // 5
+  vidBusy,   // 6
+  vidAlso,   // 7
+  vidAttact  // 8
+];
+
+// Define Sequences (Indices from the list above)
+const SEQ_ODD = [0, 1, 2, 3, 4, 5]; // 1 to 6
+const SEQ_EVEN = [3, 4, 5, 6, 7, 8]; // 4 to 9
+
+const TRANSITION_DURATION = 0.25; // 250ms overlap
+
+const VideoStage = ({ isRecording, onGlossDetected, botResponseCount }) => {
+  // --- WEBCAM REFS (TOUCHED NOTHING HERE) ---
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraActive, setCameraActive] = useState(false);
-  
-  // Track recording state
   const isRecordingRef = useRef(isRecording);
-  
-  // Track busy state to prevent lag
   const isBusyRef = useRef(false);
 
+  // --- AVATAR ANIMATION REFS ---
+  const player1Ref = useRef(null);
+  const player2Ref = useRef(null);
+  const [isAnimating, setIsAnimating] = useState(false); 
+  const [activePlayer, setActivePlayer] = useState(1); 
+  
+  // Ref to track active player instantly inside the loop
+  const activePlayerRef = useRef(1); 
+  
+  const playlistRef = useRef([]);
+  const currentVideoIndexRef = useRef(0);
+  const animationFrameRef = useRef(null);
+
+  // =========================================================
+  // 🟢 SECTION 1: SENSITIVE PREDICTION LOGIC (UNTOUCHED)
+  // =========================================================
   useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording]);
@@ -69,11 +112,10 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
                 });
 
                 if (response.data.gloss) {
-                  console.log("Python saw:", response.data.gloss);
                   onGlossDetected(response.data.gloss);
                 }
               } catch (error) {
-                console.error("Frame dropped (Server busy)");
+                // console.error("Frame dropped (Server busy)");
               } finally {
                 isBusyRef.current = false;
               }
@@ -86,13 +128,119 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
     }
 
     return () => clearInterval(intervalId);
-  }, [isRecording, cameraActive]);
+  }, [isRecording, cameraActive, onGlossDetected]);
+
+  // =========================================================
+  // 🔵 SECTION 2: AVATAR ANIMATION ENGINE (FIXED)
+  // =========================================================
+
+  // Trigger animation when botResponseCount changes
+  useEffect(() => {
+    if (botResponseCount > 0) {
+      playSequence(botResponseCount % 2 !== 0 ? SEQ_ODD : SEQ_EVEN);
+    }
+  }, [botResponseCount]);
+
+  const playSequence = (sequenceIndices) => {
+    console.log("Starting Animation Sequence:", sequenceIndices);
+    
+    // Map indices to actual video files
+    const playlist = sequenceIndices.map(idx => ANIMATION_ASSETS[idx]);
+    
+    playlistRef.current = playlist;
+    currentVideoIndexRef.current = 0;
+    
+    // Reset players
+    if (player1Ref.current && player2Ref.current) {
+      player1Ref.current.src = playlist[0];
+      player1Ref.current.currentTime = 0;
+      
+      // Prepare second player if exists
+      if (playlist.length > 1) {
+        player2Ref.current.src = playlist[1];
+        player2Ref.current.currentTime = 0;
+      }
+      
+      // Start!
+      setIsAnimating(true);
+      setActivePlayer(1);
+      activePlayerRef.current = 1; 
+      
+      player1Ref.current.play().catch(e => console.error("Play error", e));
+      
+      // Start the monitoring loop
+      startAnimationLoop();
+    }
+  };
+
+  const startAnimationLoop = () => {
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+
+    const checkTime = () => {
+      const p1 = player1Ref.current;
+      const p2 = player2Ref.current;
+      
+      if (!p1 || !p2) return;
+
+      const currentId = activePlayerRef.current;
+      const currentPlayer = currentId === 1 ? p1 : p2;
+      const nextPlayer = currentId === 1 ? p2 : p1;
+      
+      const timeLeft = currentPlayer.duration - currentPlayer.currentTime;
+      
+      if (isNaN(timeLeft)) {
+         animationFrameRef.current = requestAnimationFrame(checkTime);
+         return;
+      }
+
+      const isNearEnd = timeLeft <= TRANSITION_DURATION;
+
+      if (isNearEnd && !nextPlayer.paused) {
+        // We are already transitioning
+      } else if (isNearEnd) {
+        // TIME TO TRANSITION!
+        const nextIndex = currentVideoIndexRef.current + 1;
+        
+        if (nextIndex < playlistRef.current.length) {
+          // Play next video
+          nextPlayer.play().catch(e => console.error("Next play error", e));
+          
+          // Swap active state
+          const newActive = currentId === 1 ? 2 : 1;
+          setActivePlayer(newActive); 
+          activePlayerRef.current = newActive;
+          
+          currentVideoIndexRef.current = nextIndex;
+
+          const videoAfterNext = playlistRef.current[nextIndex + 1];
+          if (videoAfterNext) {
+             setTimeout(() => {
+                currentPlayer.pause();
+                currentPlayer.currentTime = 0;
+                currentPlayer.src = videoAfterNext;
+                currentPlayer.load();
+             }, TRANSITION_DURATION * 1000 + 100); 
+          }
+        } else {
+          // End of Playlist
+          setTimeout(() => {
+            setIsAnimating(false);
+            currentPlayer.pause();
+            currentPlayer.currentTime = 0;
+          }, timeLeft * 1000); 
+          return; // Stop loop
+        }
+      }
+      animationFrameRef.current = requestAnimationFrame(checkTime);
+    };
+    animationFrameRef.current = requestAnimationFrame(checkTime);
+  };
 
   return (
     <div className="flex flex-col md:flex-row gap-4 h-[350px] w-full mb-6">
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Left: User Webcam */}
+      {/* LEFT: USER INPUT */}
       <div className={`flex-1 rounded-xl overflow-hidden relative shadow-md border-2 transition-colors ${isRecording ? 'border-red-500' : 'border-gray-200'}`}>
         <div className="bg-black w-full h-full">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
@@ -109,21 +257,36 @@ const VideoStage = ({ isRecording, onGlossDetected }) => {
         </div>
       </div>
 
-      {/* Right: Avatar Output (UPDATED) */}
+      {/* RIGHT: AVATAR OUTPUT */}
       <div className="flex-1 bg-gray-100 rounded-xl flex flex-col items-center justify-center relative shadow-md border border-gray-200 overflow-hidden">
         
-        {/* [NEW] The Welcome Video */}
+        {/* 1. IDLE LOOP (Ensured NO LOOP so it plays once) */}
         <video 
           src={welcomeVideo} 
           autoPlay 
-          playsInline
-          // Removed 'loop' so it stops when done
-          // Removed 'controls' so user can't stop it
-          className="w-full h-full object-cover"
+          playsInline 
+          muted
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
+        />
+
+        {/* 2. PLAYER 1 */}
+        <video 
+          ref={player1Ref}
+          playsInline 
+          muted 
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isAnimating && activePlayer === 1 ? 'opacity-100' : 'opacity-0'}`}
+        />
+
+        {/* 3. PLAYER 2 */}
+        <video 
+          ref={player2Ref}
+          playsInline 
+          muted 
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isAnimating && activePlayer === 2 ? 'opacity-100' : 'opacity-0'}`}
         />
 
         {/* Badge Overlay */}
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2 py-1 rounded flex items-center gap-1 shadow-sm">
+        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2 py-1 rounded flex items-center gap-1 shadow-sm z-10">
           <Bot size={12} /> <span>AI Assistant</span>
         </div>
       </div>

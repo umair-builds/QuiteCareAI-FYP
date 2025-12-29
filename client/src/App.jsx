@@ -1,10 +1,12 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-// --- 1. ADD THESE TWO IMPORTS ---
+// 1. OLD TOAST (Keep for Login/Signup if needed)
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css'; 
-// --------------------------------
+
+// 2. NEW TOAST (Required for Sidebar Delete Button)
+import { Toaster } from 'react-hot-toast'; 
 
 // Import Pages
 import Home from './pages/Home';
@@ -17,9 +19,11 @@ import ResetPassword from './pages/ResetPassword';
 function App() {
   return (
     <>
-      {/* --- 2. ADD THIS CONTAINER AT THE TOP --- */}
-      {/* This invisible box waits for toast.success() or toast.error() commands */}
+      {/* Container for React-Toastify (Login/Signup) */}
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* [NEW] Container for React-Hot-Toast (Sidebar Delete) */}
+      <Toaster />
       
       <Routes>
         <Route path="/" element={<Home />} />
