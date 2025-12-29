@@ -60,3 +60,13 @@ exports.getChatById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// @route   DELETE /api/chat/:id
+exports.deleteSession = async (req, res) => {
+  try {
+    await Chat.findByIdAndDelete(req.params.id);
+    res.json({ message: "Chat deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
