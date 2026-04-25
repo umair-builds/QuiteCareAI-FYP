@@ -1,0 +1,9 @@
+# This file exists to keep the folder tracked in git.
+# The actual model weights (model.safetensors ~532MB) are NOT committed to git.
+# 
+# HOW TO GET THE MODEL:
+# The model file is too large for GitHub. To restore it, either:
+#   1. Copy model.safetensors from your local machine / backup drive.
+#   2. OR re-train the Glossa-BART model and save it here.
+#
+# Ignored by: .gitignore rule -> *.safetensors

@@ -11,7 +11,25 @@ node_modules/
 venv/
 __pycache__/
 *.pyc
+*.pyo
 
 # OS
 .DS_Store
 Thumbs.db
+
+# LOGS
+*.log
+backend/backend.log
+client/client*.log
+ai_engine/ai_engine.log
+nohup.out
+
+# LARGE ML MODEL BINARIES (Too big for git - use Git LFS or HuggingFace Hub)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# LOCK FILES (optional - uncomment if you prefer not to track these)
+# package-lock.json
