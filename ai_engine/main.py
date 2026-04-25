@@ -1,15 +1,20 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Dict, Optional
+import datetime
+import json
+
 from predictor import SignPredictor
 from translator import GlossTranslator
-from bot import PsychologistBot  # [NEW] Import Bot
+from core_engine import load_vocabulary, mirror_filter
+from aria_bot import generate_gloss_response, semantic_verifier
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -17,8 +22,15 @@ app.add_middleware(
 # Initialize Models
 sign_engine = SignPredictor()
 bart_engine = GlossTranslator()
-psych_bot = PsychologistBot() # [NEW] Initialize Bot
 
+# Initialize Aria Chatbot Brain
+vocab_set = load_vocabulary("full_ai_categorized.txt")
+print(f"✅ Aria Brain Ready: Loaded {len(vocab_set)} words into vocabulary.")
+
+
+# ==========================================
+# SIGN LANGUAGE ENDPOINTS (Unchanged)
+# ==========================================
 @app.get("/")
 def home():
     return {"status": "QuietCare AI Brain is Active"}
@@ -34,15 +46,121 @@ async def translate_gloss(gloss_text: str = Form(...)):
     sentence = bart_engine.translate(gloss_text)
     return {"sentence": sentence}
 
-# [NEW] Chat Response Endpoint
-@app.post("/chat-response")
-async def chat_response(user_text: str = Form(...)):
+
+# ==========================================
+# ARIA CHATBOT ENDPOINT (Upgraded)
+# ==========================================
+
+async def _run_aria_pipeline(user_text: str, emotion: str, history: list) -> dict:
     """
-    Receives: "I am feeling sad"
-    Returns: { 
-        "reply": "It is okay to feel sad.", 
-        "gloss": "IT OKAY FEEL SAD" 
+    The full Aria pipeline (Semantic Verifier Architecture):
+    1. Agent 1 (120B Psychologist)  → natural English response + first-pass ASL gloss
+    2. Agent 2 (Semantic Verifier)  → ALWAYS compares English meaning to the gloss;
+                                      rewrites word-salad; injects OOV words if needed
+                                      to PRESERVE MEANING over dictionary compliance.
+    3. Mirror Filter                → catches any OOV words the verifier injected,
+                                      keeps them in the sequence, and returns the list
+                                      so we can log them as animations to build.
+    """
+    # Session Memory Management — keep only last 10 messages (5 turns)
+    if len(history) > 10:
+        history = history[-10:]
+
+    # ── STEP 1: Agent 1 — Psychologist generates English + first-pass gloss ──────
+    ai_data = await generate_gloss_response(user_text, emotion, vocab_set, history)
+    natural_text = ai_data.get("natural_response", "I am here to support you.")
+    raw_gloss = ai_data.get("gloss_sequence", "").lower()
+
+    print(f"\n[AGENT 1 RAW GLOSS]: '{raw_gloss}'")
+    print(f"[AGENT 1 ENGLISH  ]: '{natural_text}'")
+
+    # ── STEP 2: Agent 2 — Semantic Verifier ALWAYS runs ─────────────────────────
+    # It compares the English meaning to the raw gloss and either:
+    #   a) confirms it is valid and tightens the grammar, OR
+    #   b) rewrites it, injecting OOV words when the vocabulary list alone
+    #      would produce meaningless word salad.
+    verified_gloss = await semantic_verifier(natural_text, raw_gloss, vocab_set)
+
+    # ── STEP 3: Mirror Filter — catches any OOV words the verifier injected ─────
+    # The filter KEEPS every word (including OOV ones) in the sequence so the
+    # frontend / Unity receives the full, meaningful array.
+    # It also returns the OOV words separately so we can warn the developer.
+    final_sequence, missing_unanimated_words = mirror_filter(verified_gloss, vocab_set)
+
+    # ── STEP 4: Developer Warning System ────────────────────────────────────────
+    if missing_unanimated_words:
+        print("\n=======================================================")
+        print("⚠️  MEANING PRESERVATION OVERRIDE TRIGGERED")
+        print(f"   English Msg : '{natural_text}'")
+        print(f"   Raw Gloss   : '{raw_gloss}'")
+        print(f"   Verified    : '{verified_gloss}'")
+        print(f"   OOV Words   : {missing_unanimated_words}")
+        print("   ➡  These words need Blender animations. See missing_animations.log")
+        print("=======================================================\n")
+
+        # Append to the developer's animated-words to-do list
+        with open("missing_animations.log", "a") as log_file:
+            timestamp = datetime.datetime.now().isoformat()
+            log_file.write(
+                f"[{timestamp}] MEANING OVERRIDE | "
+                f"English: '{natural_text}' | "
+                f"OOV Words Needed: {missing_unanimated_words}\n"
+            )
+    else:
+        print(f"[VERIFIED GLOSS ✅]: {final_sequence} — all words in vocabulary.")
+
+    return {
+        "status": "success",
+        "natural_response": natural_text,
+        "original_gloss": raw_gloss,          # first-pass from Agent 1 (for debugging)
+        "dropped_words": missing_unanimated_words,  # OOV words (need animations)
+        "animation_sequence": final_sequence  # FULL verified sequence → Unity
+    }
+
+
+@app.post("/chat-response")
+async def chat_response(request: Request):
+    """
+    Accepts BOTH:
+    - FormData:  user_text (required), emotion (optional), history (optional JSON string)
+    - JSON Body: { user_text, emotion, history[] }
+    
+    Returns the same format as QuiteCare_Chatbot:
+    {
+        "status": "success",
+        "natural_response": "Full English reply for the chat box",
+        "original_gloss": "raw gloss string from AI",
+        "dropped_words": [],
+        "animation_sequence": ["you", "strong", "good"]
     }
     """
-    reply, gloss = psych_bot.get_response(user_text)
-    return {"reply": reply, "gloss": gloss}
+    try:
+        content_type = request.headers.get("content-type", "")
+        
+        if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+            # --- FORM DATA (from the React frontend) ---
+            form = await request.form()
+            user_text = form.get("user_text", "")
+            emotion = form.get("emotion", "neutral")
+            history_raw = form.get("history", "[]")
+            try:
+                history = json.loads(history_raw) if isinstance(history_raw, str) else []
+            except json.JSONDecodeError:
+                history = []
+        else:
+            # --- JSON BODY (from Gradio / Postman / API clients) ---
+            body = await request.json()
+            user_text = body.get("user_text", "")
+            emotion = body.get("emotion", "neutral")
+            history = body.get("history", [])
+        
+        if not user_text:
+            raise HTTPException(status_code=400, detail="user_text is required")
+        
+        return await _run_aria_pipeline(user_text, emotion, history)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Chat Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

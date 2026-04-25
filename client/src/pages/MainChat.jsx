@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Bot } from 'lucide-react';
 import { useSelector } from 'react-redux';
@@ -26,6 +26,10 @@ const MainChat = () => {
 
   // Track how many times bot has responded
   const [responseCount, setResponseCount] = useState(0);
+
+  // Text input state
+  const [textInput, setTextInput] = useState('');
+  const [isBotThinking, setIsBotThinking] = useState(false);
 
   // --- HANDLERS ---
   const handleNewSession = () => {
@@ -143,7 +147,7 @@ const MainChat = () => {
       const formData = new FormData();
       formData.append('gloss_text', rawGlossText);
 
-      const transResponse = await axios.post('http://127.0.0.1:8000/translate', formData, {
+      const transResponse = await axios.post('http://localhost:8000/translate', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const userSentence = transResponse.data.sentence;
@@ -159,20 +163,20 @@ const MainChat = () => {
       const chatFormData = new FormData();
       chatFormData.append('user_text', userSentence);
 
-      const botResponse = await axios.post('http://127.0.0.1:8000/chat-response', chatFormData, {
+      const botResponse = await axios.post('http://localhost:8000/chat-response', chatFormData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      const { reply, gloss } = botResponse.data;
+      const { natural_response, animation_sequence } = botResponse.data;
 
       setMessages(prev => {
         const newLog = [...prev];
         newLog.pop();
-        newLog.push({ sender: 'bot', text: reply });
+        newLog.push({ sender: 'bot', text: natural_response });
         return newLog;
       });
 
-      setCurrentGlosses(gloss.split(" "));
+      setCurrentGlosses(animation_sequence);
       setIsAiOutput(true);
       setResponseCount(prev => prev + 1);
 
@@ -186,6 +190,42 @@ const MainChat = () => {
         newLog.push({ sender: 'bot', text: "Connection Error" });
         return newLog;
       });
+    }
+  };
+
+  // Direct text input handler — skips gloss translation
+  const handleTextSend = async () => {
+    const text = textInput.trim();
+    if (!text || isBotThinking) return;
+    setTextInput('');
+    setIsBotThinking(true);
+    setMessages(prev => [...prev, { sender: 'user', text }, { sender: 'bot', text: 'Thinking...' }]);
+    try {
+      const formData = new FormData();
+      formData.append('user_text', text);
+      const botResponse = await axios.post('http://localhost:8000/chat-response', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const { natural_response, animation_sequence } = botResponse.data;
+      setMessages(prev => {
+        const log = [...prev];
+        log.pop();
+        log.push({ sender: 'bot', text: natural_response });
+        return log;
+      });
+      setCurrentGlosses(animation_sequence);
+      setIsAiOutput(true);
+      setResponseCount(prev => prev + 1);
+    } catch (err) {
+      console.error('Text send error:', err);
+      setMessages(prev => {
+        const log = [...prev];
+        log.pop();
+        log.push({ sender: 'bot', text: 'Connection Error' });
+        return log;
+      });
+    } finally {
+      setIsBotThinking(false);
     }
   };
 
@@ -260,6 +300,26 @@ const MainChat = () => {
                     onClose={handleCloseSession}
                   />
                   <ChatLog messages={messages} />
+
+                  {/* --- TEXT INPUT BAR --- */}
+                  <div className="flex items-center gap-2 mt-2 px-1 pb-2">
+                    <input
+                      type="text"
+                      value={textInput}
+                      onChange={e => setTextInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleTextSend()}
+                      disabled={isBotThinking}
+                      placeholder={isBotThinking ? 'Bot is thinking...' : 'Or type a message directly...'}
+                      className="flex-1 px-4 py-2 text-sm rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white disabled:opacity-50"
+                    />
+                    <button
+                      onClick={handleTextSend}
+                      disabled={isBotThinking || !textInput.trim()}
+                      className="px-4 py-2 bg-black text-white text-sm rounded-full hover:bg-gray-800 transition disabled:opacity-40"
+                    >
+                      Send
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-60 pb-20">

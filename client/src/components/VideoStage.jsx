@@ -107,7 +107,7 @@ const VideoStage = ({ isRecording, onGlossDetected, botResponseCount }) => {
               formData.append('file', blob, 'frame.jpg');
 
               try {
-                const response = await axios.post('http://127.0.0.1:8000/predict-frame', formData, {
+                const response = await axios.post('http://localhost:8000/predict-frame', formData, {
                   headers: { 'Content-Type': 'multipart/form-data' }
                 });
 

@@ -2,14 +2,22 @@ import { createSlice } from '@reduxjs/toolkit';
 
 // --- STEP 1: Check LocalStorage immediately when app loads ---
 // If user data exists in browser memory, load it. If not, set to null.
+const safeParseJSON = (value) => {
+  try {
+    if (!value || value === 'undefined' || value === 'null') return null;
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
 const userFromStorage = localStorage.getItem('user');
 const tokenFromStorage = localStorage.getItem('token');
 
 const initialState = {
-  user: userFromStorage ? JSON.parse(userFromStorage) : null,
-  token: tokenFromStorage ? JSON.parse(tokenFromStorage) : null,
-  // If we found a user in storage, they are authenticated
-  isAuthenticated: !!userFromStorage, 
+  user: safeParseJSON(userFromStorage),
+  token: safeParseJSON(tokenFromStorage),
+  isAuthenticated: !!safeParseJSON(userFromStorage),
 };
 
 export const authSlice = createSlice({
