@@ -1,14 +1,13 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer'); // <--- 1. Import Nodemailer
+const nodemailer = require('nodemailer');
 
-// --- 2. CONFIGURE EMAIL TRANSPORTER ---
-// (Use your real Gmail and App Password here)
+// --- EMAIL TRANSPORTER (credentials from .env) ---
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'fixiit098@gmail.com', // REPLACE THIS
-    pass: 'tvuk dudp ibnm hqyj'      // REPLACE THIS
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 

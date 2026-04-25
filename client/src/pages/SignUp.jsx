@@ -28,7 +28,7 @@ const SignUp = () => {
 
     try {
         // 2. Send data to Backend
-        const response = await fetch('http://localhost:5000/api/auth/signup', {
+        const response = await fetch('http://localhost:5005/api/auth/signup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

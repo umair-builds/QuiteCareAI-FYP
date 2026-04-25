@@ -41,7 +41,7 @@ const MainChat = () => {
   const handleLoadSession = async (chatId) => {
     try {
       console.log("Loading chat:", chatId);
-      const res = await axios.get(`http://localhost:5000/api/chat/${chatId}`);
+      const res = await axios.get(`http://localhost:5005/api/chat/${chatId}`);
 
       setMessages(res.data.messages);
       setSessionStarted(true);
@@ -111,7 +111,7 @@ const MainChat = () => {
   const handleCloseSession = async () => {
     if (sessionStarted && user && messages.length > 1 && !currentChatId) {
       try {
-        await axios.post('http://localhost:5000/api/chat/save', {
+        await axios.post('http://localhost:5005/api/chat/save', {
           userId: user.id || user._id,
           messages: messages
         });

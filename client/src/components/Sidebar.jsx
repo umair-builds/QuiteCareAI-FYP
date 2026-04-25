@@ -13,7 +13,7 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const fetchHistory = async () => {
     if (user) {
       try {
-        const res = await axios.get(`http://localhost:5000/api/chat/history/${user.id || user._id}`);
+        const res = await axios.get(`http://localhost:5005/api/chat/history/${user.id || user._id}`);
         setHistory(res.data);
       } catch (err) {
         console.error("Error loading history:", err);
@@ -49,7 +49,7 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
             onClick={async () => {
               toast.dismiss(t.id); 
               try {
-                await axios.delete(`http://localhost:5000/api/chat/${chatId}`);
+                await axios.delete(`http://localhost:5005/api/chat/${chatId}`);
                 toast.success("Session deleted");
                 
                 // 1. Refresh list
