@@ -9,12 +9,6 @@ const app = express();
 app.use(cors()); // <--- Enable CORS
 app.use(express.json());
 
-// --- DATABASE CONNECTION ---
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fyp_db';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.log('❌ DB Connection Error:', err));
-
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
@@ -24,4 +18,20 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/test', testRoutes);
 
 const PORT = process.env.PORT || 5005;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fyp_db';
+
+async function startServer() {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log('✅ MongoDB Connected');
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  } catch (err) {
+    console.error('❌ DB Connection Error:', err.message);
+    console.error(
+      'ℹ️ Atlas check: add your current public IP in Atlas Network Access (Security -> Network Access), then retry.'
+    );
+    process.exit(1);
+  }
+}
+
+startServer();

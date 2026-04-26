@@ -2,13 +2,18 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional
+import os
 import datetime
 import json
+import httpx
+from dotenv import load_dotenv
 
 from predictor import SignPredictor
 from translator import GlossTranslator
 from core_engine import load_vocabulary, mirror_filter
 from aria_bot import generate_gloss_response, semantic_verifier
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -164,3 +169,65 @@ async def chat_response(request: Request):
     except Exception as e:
         print(f"Chat Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Ensure GROQ_API_KEY is loaded in ai_engine/.env
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+class ChatMessage(BaseModel):
+    sender: str
+    text: str
+
+class TitleRequest(BaseModel):
+    messages: List[ChatMessage]
+
+@app.post("/generate-title")
+async def generate_title(request: TitleRequest):
+    """
+    Takes a list of messages and uses Groq (llama-3.1-8b-instant) 
+    to generate a 3 to 5 word summary title.
+    """
+    if len(request.messages) < 3:
+        return {"title": "New Sign Session"}
+
+    # Take the first 5 messages to establish the context
+    first_few_msgs = request.messages[:5]
+    convo_string = "\n".join(
+        [f"{m.sender}: {m.text}" for m in first_few_msgs if "Thinking" not in m.text]
+    )
+
+    if not GROQ_API_KEY:
+        print("⚠️ Warning: GROQ_API_KEY not found in ai_engine/.env. Using fallback title.")
+        return {"title": "Sign Language Conversation"}
+
+    try:
+        # Use httpx for a fast, async call to Groq
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are an AI that creates titles for sign language conversations. Analyze the provided chat history and understand what was discussed. Generate a short, descriptive title. The title MUST be exactly 3 to 5 words long. Do not include quotes, punctuation, or any extra text."
+                        },
+                        {"role": "user", "content": convo_string}
+                    ],
+                    "max_tokens": 10,
+                    "temperature": 0.3
+                },
+                timeout=5.0 # Don't hang the server if Groq is slow
+            )
+            
+            response.raise_for_status()
+            data = response.json()
+            generated_title = data["choices"][0]["message"]["content"].strip()
+            return {"title": generated_title}
+
+    except Exception as e:
+        print(f"Error calling Groq for title: {e}")
+        return {"title": "Sign Language Conversation"}

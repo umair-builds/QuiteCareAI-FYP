@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Bot } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { clearReplaySequence } from '../features/chat/chatSlice';
 
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -11,6 +12,8 @@ import ChatLog from '../components/ChatLog';
 
 const MainChat = () => {
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { replaySequence } = useSelector((state) => state.chat);
 
   // --- STATE ---
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -21,8 +24,9 @@ const MainChat = () => {
   ]);
   const [isAiOutput, setIsAiOutput] = useState(false);
 
-  // Track active chat ID
+  // Track active chat ID and Title
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [chatTitle, setChatTitle] = useState("New Sign Session"); // [NEW]
 
   // Track how many times bot has responded
   const [responseCount, setResponseCount] = useState(0);
@@ -30,6 +34,51 @@ const MainChat = () => {
   // Text input state
   const [textInput, setTextInput] = useState('');
   const [isBotThinking, setIsBotThinking] = useState(false);
+
+  // --- BACKGROUND AUTO-SAVE [NEW] ---
+  useEffect(() => {
+    const autoSave = async () => {
+      // Only run auto-save if session is active and we have real messages
+      if (sessionStarted && user && messages.length > 1) {
+        // Prevent saving if the last message is a loading state
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage.text === "Thinking..." || lastMessage.text.includes("... Translating")) {
+            return; 
+        }
+
+        try {
+          const res = await axios.post('http://localhost:5005/api/chat/save', {
+            userId: user.id || user._id,
+            chatId: currentChatId,
+            existingTitle: chatTitle,
+            messages: messages
+          });
+          
+          if (res.data.chat) {
+            // Lock in the database ID so future messages update this exact file
+            if (!currentChatId) setCurrentChatId(res.data.chat._id);
+            // Update the title if Groq generated a new one
+            if (res.data.chat.title !== chatTitle) setChatTitle(res.data.chat.title);
+          }
+        } catch (error) {
+          console.error("Auto-save failed:", error);
+        }
+      }
+    };
+    
+    // Trigger the save every time the 'messages' array changes
+    autoSave();
+  }, [messages, sessionStarted, user, currentChatId, chatTitle]); 
+
+  // --- [NEW] LISTENER FOR AVATAR REPLAY ---
+  useEffect(() => {
+    if (replaySequence) {
+      setCurrentGlosses(replaySequence); // Push words to the bar
+      setIsAiOutput(true);               // Tell UI the bot is controlling it
+      setResponseCount(prev => prev + 1);// Trigger VideoStage update
+      dispatch(clearReplaySequence());   // Reset Redux state
+    }
+  }, [replaySequence, dispatch]);
 
   // --- HANDLERS ---
   const handleNewSession = () => {
@@ -39,12 +88,12 @@ const MainChat = () => {
     setIsAiOutput(false);
     setResponseCount(0);
     setCurrentChatId(null);
+    setChatTitle("New Sign Session"); // [UPDATED]
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
   const handleLoadSession = async (chatId) => {
     try {
-      console.log("Loading chat:", chatId);
       const res = await axios.get(`http://localhost:5005/api/chat/${chatId}`);
 
       setMessages(res.data.messages);
@@ -53,6 +102,7 @@ const MainChat = () => {
       setCurrentGlosses([]);
       setIsAiOutput(false);
       setCurrentChatId(chatId);
+      setChatTitle(res.data.title || "New Sign Session"); // [UPDATED] Load the existing title
       setResponseCount(0);
 
     } catch (err) {
@@ -60,15 +110,14 @@ const MainChat = () => {
     }
   };
 
-  // [NEW] Logic to clear screen if the ACTIVE session is deleted
   const handleDeleteActiveSession = (deletedChatId) => {
     if (currentChatId === deletedChatId) {
-      console.log("Active session deleted. Resetting view.");
       setSessionStarted(false);
       setIsRecording(false);
       setCurrentGlosses([]);
       setIsAiOutput(false);
       setCurrentChatId(null);
+      setChatTitle("New Sign Session"); // [UPDATED]
       setResponseCount(0);
       setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
     }
@@ -93,18 +142,13 @@ const MainChat = () => {
 
   const handleStart = () => {
     setIsRecording(true);
-
-    // Only clear the bar if the current text is an AI response.
-    // If it's user text (paused), keep it so you can continue signing.
     if (isAiOutput) {
       setCurrentGlosses([]);
       setIsAiOutput(false);
     }
   };
 
-  const handlePause = () => {
-    setIsRecording(false);
-  };
+  const handlePause = () => setIsRecording(false);
 
   const handleRetake = () => {
     setIsRecording(false);
@@ -112,26 +156,14 @@ const MainChat = () => {
     setCurrentGlosses([]);
   };
 
-  const handleCloseSession = async () => {
-    if (sessionStarted && user && messages.length > 1 && !currentChatId) {
-      try {
-        await axios.post('http://localhost:5005/api/chat/save', {
-          userId: user.id || user._id,
-          messages: messages
-        });
-        console.log("Session Saved!");
-      } catch (error) {
-        console.error("Failed to save chat:", error);
-      }
-    } else {
-      console.log("Session closed (Old session or empty). Not saving duplicate.");
-    }
-
+  const handleCloseSession = () => {
+    // [UPDATED] Axios call removed because Auto-Save handles it!
     setSessionStarted(false);
     setIsRecording(false);
     setIsAiOutput(false);
     setCurrentGlosses([]);
     setCurrentChatId(null);
+    setChatTitle("New Sign Session"); // [UPDATED]
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
@@ -141,6 +173,8 @@ const MainChat = () => {
     if (currentGlosses.length === 0) return;
 
     const rawGlossText = currentGlosses.join(" ");
+
+    // Temporarily show the "Translating" message
     setMessages(prev => [...prev, { sender: 'user', text: `[${rawGlossText}] ... Translating` }]);
 
     try {
@@ -152,10 +186,11 @@ const MainChat = () => {
       });
       const userSentence = transResponse.data.sentence;
 
+      // Attach user's signSequence to the message
       setMessages(prev => {
         const newLog = [...prev];
-        newLog.pop();
-        newLog.push({ sender: 'user', text: userSentence });
+        newLog.pop(); // Remove translating state
+        newLog.push({ sender: 'user', text: userSentence, signSequence: currentGlosses });
         newLog.push({ sender: 'bot', text: "Thinking..." });
         return newLog;
       });
@@ -169,10 +204,11 @@ const MainChat = () => {
 
       const { natural_response, animation_sequence } = botResponse.data;
 
+      // Attach bot's signSequence to the message
       setMessages(prev => {
         const newLog = [...prev];
-        newLog.pop();
-        newLog.push({ sender: 'bot', text: natural_response });
+        newLog.pop(); // Remove thinking state
+        newLog.push({ sender: 'bot', text: natural_response, signSequence: animation_sequence });
         return newLog;
       });
 
@@ -193,13 +229,15 @@ const MainChat = () => {
     }
   };
 
-  // Direct text input handler — skips gloss translation
   const handleTextSend = async () => {
     const text = textInput.trim();
     if (!text || isBotThinking) return;
     setTextInput('');
     setIsBotThinking(true);
-    setMessages(prev => [...prev, { sender: 'user', text }, { sender: 'bot', text: 'Thinking...' }]);
+
+    // Add User text
+    setMessages(prev => [...prev, { sender: 'user', text, signSequence: [] }, { sender: 'bot', text: 'Thinking...' }]);
+
     try {
       const formData = new FormData();
       formData.append('user_text', text);
@@ -207,12 +245,15 @@ const MainChat = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const { natural_response, animation_sequence } = botResponse.data;
+
+      // Attach bot's signSequence to the message
       setMessages(prev => {
         const log = [...prev];
         log.pop();
-        log.push({ sender: 'bot', text: natural_response });
+        log.push({ sender: 'bot', text: natural_response, signSequence: animation_sequence });
         return log;
       });
+
       setCurrentGlosses(animation_sequence);
       setIsAiOutput(true);
       setResponseCount(prev => prev + 1);
@@ -234,7 +275,6 @@ const MainChat = () => {
       <Navbar page="chat" />
       <div className="flex flex-1 overflow-hidden pt-20">
 
-        {/* [UPDATED] Pass the delete handler to Sidebar */}
         <Sidebar
           onNewSession={handleNewSession}
           onLoadSession={handleLoadSession}
@@ -278,8 +318,8 @@ const MainChat = () => {
                           disabled={isAiOutput}
                           placeholder={isAiOutput ? "AI Response (Click Start to reply)" : "Type or correct signs here..."}
                           className={`w-full px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${isAiOutput
-                              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-                              : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500'
+                            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                            : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500'
                             }`}
                         />
                         {!isAiOutput && (
@@ -299,6 +339,7 @@ const MainChat = () => {
                     onRetake={handleRetake}
                     onClose={handleCloseSession}
                   />
+
                   <ChatLog messages={messages} />
 
                   {/* --- TEXT INPUT BAR --- */}

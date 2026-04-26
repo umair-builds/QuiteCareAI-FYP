@@ -9,6 +9,7 @@ load_dotenv()
 
 # --- SECURE TOKEN LOADING ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_AUTH_FAILED = False
 
 if not GROQ_API_KEY:
     print("⚠️ WARNING: GROQ_API_KEY not found in .env file!")
@@ -38,8 +39,14 @@ def format_vocab_for_prompt(vocab_set: set) -> str:
 
 async def generate_gloss_response(user_text, emotion, vocab_set, history=None):
     """Agent 1: The 120B Psychologist — generates natural response + ASL gloss."""
+    global GROQ_AUTH_FAILED
     if history is None:
         history = []
+    if not GROQ_API_KEY or GROQ_AUTH_FAILED:
+        return {
+            "natural_response": "I am having trouble connecting to my systems right now, but please know you are not alone.",
+            "gloss_sequence": "system break alone no"
+        }
     allowed_words_string = format_vocab_for_prompt(vocab_set)
     
     system_prompt = f"""
@@ -117,7 +124,12 @@ async def generate_gloss_response(user_text, emotion, vocab_set, history=None):
             "gloss_sequence": "system error you feel what"
         }
     except Exception as e:
-        print(f"ERROR in generate_gloss_response: {e}")
+        error_message = str(e)
+        if "401" in error_message:
+            GROQ_AUTH_FAILED = True
+            print("ERROR in generate_gloss_response: Groq auth failed (401). Disabling Groq calls until restart.")
+        else:
+            print(f"ERROR in generate_gloss_response: {error_message}")
         return {
             "natural_response": "I am having trouble connecting to my systems right now, but please know you are not alone.",
             "gloss_sequence": "system break alone no"
@@ -137,6 +149,10 @@ async def semantic_verifier(english_text: str, raw_gloss: str, vocab_set: set) -
     The caller (main.py) is responsible for logging any OOV words that end up
     in the returned sequence.
     """
+    global GROQ_AUTH_FAILED
+    if not GROQ_API_KEY or GROQ_AUTH_FAILED:
+        return raw_gloss
+
     allowed_words_string = format_vocab_for_prompt(vocab_set)
 
     system_prompt = f"""
@@ -209,5 +225,10 @@ async def semantic_verifier(english_text: str, raw_gloss: str, vocab_set: set) -
         return " ".join(fixed_array)
 
     except Exception as e:
-        print(f"[SEMANTIC VERIFIER ERROR]: {e}  — falling back to raw gloss.")
+        error_message = str(e)
+        if "401" in error_message:
+            GROQ_AUTH_FAILED = True
+            print("[SEMANTIC VERIFIER ERROR]: Groq auth failed (401). Disabling Groq calls until restart.")
+        else:
+            print(f"[SEMANTIC VERIFIER ERROR]: {error_message}  — falling back to raw gloss.")
         return raw_gloss

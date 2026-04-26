@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, MoreHorizontal, Edit2, Pin } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// [UPDATED] Added 'onSessionDeleted' prop
 const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const { user } = useSelector((state) => state.auth);
   const [history, setHistory] = useState([]);
+  
+  // Track which chat has its dropdown menu open
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   // Fetch History Logic
   const fetchHistory = async () => {
@@ -27,72 +29,36 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Handle Delete
-  const handleDelete = (e, chatId) => {
-    e.stopPropagation(); 
-    
-    toast.dismiss();
-
-    toast((t) => (
-      <div className="flex flex-col gap-3 min-w-[200px]">
-        <span className="text-sm font-semibold text-gray-800">
-          Delete this session?
-        </span>
-        <div className="flex gap-2 justify-end">
-          <button 
-            onClick={() => toast.dismiss(t.id)}
-            className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={async () => {
-              toast.dismiss(t.id); 
-              try {
-                await axios.delete(`http://localhost:5005/api/chat/${chatId}`);
-                toast.success("Session deleted");
-                
-                // 1. Refresh list
-                fetchHistory(); 
-                
-                // 2. [NEW] Notify parent to close window if it's open
-                if (onSessionDeleted) {
-                    onSessionDeleted(chatId);
-                }
-
-              } catch (err) {
-                console.error("Delete failed:", err);
-                toast.error("Could not delete");
-              }
-            }}
-            className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-md shadow-sm transition-colors"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    ), {
-      duration: 5000, 
-      position: 'top-left',
-      style: {
-        background: '#fff',
-        color: '#333',
-        padding: '12px 16px',
-        borderRadius: '10px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        border: '1px solid #f3f4f6',
-      },
-    });
+  // Handle Delete (Now happens instantly from the dropdown)
+  const handleDelete = async (chatId) => {
+    setOpenMenuId(null); // Close the menu
+    try {
+      await axios.delete(`http://localhost:5005/api/chat/${chatId}`);
+      toast.success("Session deleted", { duration: 2000 });
+      fetchHistory(); 
+      if (onSessionDeleted) {
+          onSessionDeleted(chatId);
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      toast.error("Could not delete session");
+    }
   };
 
   return (
-    <div className="w-64 bg-gray-50 h-full border-r border-gray-200 flex flex-col hidden md:flex">
+    <div className="w-64 bg-gray-50 h-full border-r border-gray-200 flex flex-col hidden md:flex overflow-hidden">
       
+      {/* --- INVISIBLE STYLE BLOCK TO HIDE SWIPE SCROLLBARS --- */}
+      <style>{`
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
       {/* NEW SESSION BUTTON */}
-      <div className="p-4 flex-shrink-0">
+      <div className="p-3 flex-shrink-0">
         <button 
           onClick={onNewSession} 
-          className="w-full flex items-center gap-3 px-3 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-all text-gray-700 shadow-sm group"
+          className="w-full flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-all text-gray-700 shadow-sm group"
         >
           <div className="bg-gray-50 p-1 rounded-md border border-gray-200 group-hover:bg-white transition-colors">
             <Plus size={16} className="text-gray-900" />
@@ -102,36 +68,79 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
       </div>
 
       {/* HISTORY LIST */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4">
-        <div className="text-[11px] font-bold text-gray-400 px-3 py-2 uppercase tracking-wider mb-1">
+      <div className="flex-1 overflow-y-auto px-2 pb-4">
+        <div className="text-[10px] font-bold text-gray-400 px-2 py-2 uppercase tracking-wider mb-1">
           Recent Sessions
         </div>
         
         {history.length === 0 ? (
-            <p className="text-xs text-gray-400 px-3 italic">No sessions yet.</p>
+            <p className="text-xs text-gray-400 px-2 italic">No sessions yet.</p>
         ) : (
             history.map((chat) => (
               <div 
                 key={chat._id} 
-                className="group relative w-full flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-gray-200 rounded-lg text-sm transition-colors cursor-pointer"
+                // Tighter padding (py-2, px-2) and reduced gap
+                className="group relative w-full flex items-center gap-2 px-2 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-xs transition-colors cursor-pointer"
                 onClick={() => onLoadSession(chat._id)}
               >
-                <MessageSquare size={16} className="text-gray-400" />
-                <span className="truncate flex-1">{chat.title}</span>
+                <MessageSquare size={14} className="text-gray-400 shrink-0" />
                 
-                {/* DELETE BUTTON */}
+                {/* SWIPEABLE TEXT: Replaced truncate with overflow-x-auto */}
+                <div className="flex-1 overflow-x-auto whitespace-nowrap hide-scroll text-left">
+                  {chat.title}
+                </div>
+                
+                {/* 3-DOT MENU BUTTON */}
                 <button 
-                  onClick={(e) => handleDelete(e, chat._id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-100 rounded-md text-gray-400 hover:text-red-500 transition-all"
-                  title="Delete Session"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(openMenuId === chat._id ? null : chat._id);
+                  }}
+                  className={`p-1 rounded-md hover:bg-gray-300 transition-all shrink-0 ${openMenuId === chat._id ? 'opacity-100 bg-gray-300' : 'opacity-0 group-hover:opacity-100 text-gray-500'}`}
                 >
-                  <Trash2 size={14} />
+                  <MoreHorizontal size={14} />
                 </button>
+
+                {/* THE CHATGPT-STYLE DROPDOWN MENU */}
+                {openMenuId === chat._id && (
+                  <>
+                    {/* Invisible full-screen backdrop to close menu when clicking outside */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); }}
+                    />
+                    
+                    {/* The Menu Window */}
+                    <div className="absolute right-2 top-8 w-36 bg-white border border-gray-200 shadow-xl rounded-lg z-50 py-1 overflow-hidden">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toast("Pin feature coming soon!"); setOpenMenuId(null); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-gray-700 transition-colors"
+                      >
+                        <Pin size={12} /> Pin
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toast("Rename feature coming soon!"); setOpenMenuId(null); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-gray-700 transition-colors"
+                      >
+                        <Edit2 size={12} /> Rename
+                      </button>
+                      <div className="h-px bg-gray-100 my-1"></div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(chat._id);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 text-red-500 transition-colors"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))
         )}
       </div>
-
     </div>
   );
 };
