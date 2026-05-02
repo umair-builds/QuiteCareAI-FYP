@@ -5,27 +5,23 @@ const cors = require('cors');
 
 const app = express();
 
-// ─── CORS ────────────────────────────────────────────────────────────────────
-// Whitelist: Vite dev server (local) + live Vercel frontend
+// --- CORS Configuration ---
 const allowedOrigins = [
   'http://localhost:5173',
   'https://quite-care-ai-fyp-imz9.vercel.app',
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. curl, Postman, same-origin)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS blocked: ${origin}`));
-      }
-    },
-    credentials: true,
-  })
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`));
+    }
+  },
+  credentials: true,
+})
 );
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.use(express.json());
 
@@ -38,34 +34,40 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/test', testRoutes);
 
-// Health-check — lets Vercel / uptime monitors verify the server is alive
 app.get('/', (req, res) => res.json({ status: 'ok', project: 'QuietCareAI Backend' }));
 
-// ─── DATABASE CONNECTION ──────────────────────────────────────────────────────
-// MONGODB_URI must be set in .env (locally) and in Vercel Environment Variables (production).
-const MONGODB_URI = process.env.MONGODB_URI;
+// --- CACHED DATABASE CONNECTION ---
+let cachedDb = null;
 
-if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI is not set. Add it to .env (local) or Vercel Environment Variables.');
-  process.exit(1);
-}
+const connectToDatabase = async () => {
+  if (cachedDb) return cachedDb; // Reuse connection
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch((err) => {
-    console.error('❌ DB Connection Error:', err.message);
-    console.error('ℹ️  Atlas tip: whitelist your server IP in Atlas → Security → Network Access.');
-    process.exit(1);
-  });
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is missing from environment variables');
+  }
 
-// ─── SERVER LISTEN ────────────────────────────────────────────────────────────
-// On Vercel, the file is imported as a serverless function — no need to call
-// app.listen(). Locally, we listen on PORT 5005.
+  // Connect without process.exit()
+  const db = await mongoose.connect(MONGODB_URI);
+  cachedDb = db;
+  console.log('✅ MongoDB Connected');
+  return db;
+};
+
+// Middleware to ensure DB is connected before any request
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Database connection failed", message: err.message });
+  }
+});
+
+// --- SERVER LISTEN ---
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5005;
   app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 }
 
-// Export for Vercel serverless runtime
 module.exports = app;
