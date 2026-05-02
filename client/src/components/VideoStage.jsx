@@ -126,8 +126,8 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
     console.log("Starting Animation Sequence:", signs);
     prefetchVideos(signs);
     
-    // Map signs to actual Cloudflare R2 video URLs
-    const playlist = signs.map(sign => `${R2_URL}/${sign}.mp4`);
+    // Map signs to actual Cloudflare R2 video URLs (ensure lowercase and URL-encoded)
+    const playlist = signs.map(sign => `${R2_URL}/${encodeURIComponent(sign.toLowerCase().trim())}.mp4`);
     
     playlistRef.current = playlist;
     currentVideoIndexRef.current = 0;
@@ -168,9 +168,12 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
       const currentPlayer = currentId === 1 ? p1 : p2;
       const nextPlayer = currentId === 1 ? p2 : p1;
       
-      const timeLeft = currentPlayer.duration - currentPlayer.currentTime;
+      let timeLeft = currentPlayer.duration - currentPlayer.currentTime;
       
-      if (isNaN(timeLeft)) {
+      // If the video failed to load (e.g., 404 Not Found), skip it instead of freezing
+      if (currentPlayer.error) {
+         timeLeft = 0;
+      } else if (isNaN(timeLeft)) {
          animationFrameRef.current = requestAnimationFrame(checkTime);
          return;
       }
