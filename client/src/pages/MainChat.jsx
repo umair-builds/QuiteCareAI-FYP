@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Bot } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearReplaySequence } from '../features/chat/chatSlice';
-import API_BASE from '../services/api';
+import API_BASE, { AI_ENGINE_URL } from '../services/api';
 
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -225,7 +225,7 @@ const MainChat = () => {
       const formData = new FormData();
       formData.append('gloss_text', rawGlossText);
 
-      const transResponse = await axios.post('http://localhost:8000/translate', formData, {
+      const transResponse = await axios.post(`${AI_ENGINE_URL}/translate`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const userSentence = transResponse.data.sentence;
@@ -244,7 +244,7 @@ const MainChat = () => {
       // ── Send the emotion mode so Aria can tailor its empathetic response ─────
       chatFormData.append('emotion', finalEmotion);
 
-      const botResponse = await axios.post('http://localhost:8000/chat-response', chatFormData, {
+      const botResponse = await axios.post(`${AI_ENGINE_URL}/chat-response`, chatFormData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -287,7 +287,7 @@ const MainChat = () => {
     try {
       const formData = new FormData();
       formData.append('user_text', text);
-      const botResponse = await axios.post('http://localhost:8000/chat-response', formData, {
+      const botResponse = await axios.post(`${AI_ENGINE_URL}/chat-response`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const { natural_response, animation_sequence } = botResponse.data;
@@ -349,6 +349,7 @@ const MainChat = () => {
                     onGlossDetected={handleGlossDetected}
                     onEmotionDetected={(emotion) => setEmotionBuffer(prev => [...prev, emotion])}
                     botResponseCount={responseCount}
+                    signSequence={currentGlosses}
                   />
 
                   {/* EMOTION CHIP — subtle, matches app theme */}

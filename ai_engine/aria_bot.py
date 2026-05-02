@@ -164,7 +164,7 @@ async def semantic_verifier(english_text: str, raw_gloss: str, vocab_set: set) -
       - If word salad: REWRITE using the vocab list.
       - If the vocab list still destroys meaning: INJECT OOV words to save it.
 
-    The caller (main.py) is responsible for logging any OOV words that end up
+    The caller (app.py) is responsible for logging any OOV words that end up
     in the returned sequence.
     """
     global GROQ_AUTH_FAILED

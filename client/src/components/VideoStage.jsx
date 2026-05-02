@@ -1,41 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Bot, Activity } from 'lucide-react';
 import axios from 'axios';
+import { R2_URL, AI_ENGINE_URL } from '../services/api';
+import { prefetchVideos } from '../utils/prefetch';
 
 // --- ASSETS ---
 import welcomeVideo from '../assets/welcome.mp4';
 
-// Import Sign Animations
-import vidEasy from '../assets/animations/EASY.mp4';
-import vidEnough from '../assets/animations/ENOUGH.mp4';
-import vidFeel from '../assets/animations/FEEL.mp4';
-import vidHeavy from '../assets/animations/HEAVY.mp4';
-import vidOther from '../assets/animations/OTHER.mp4';
-import vidPain from '../assets/animations/PAIN.mp4';
-import vidBusy from '../assets/animations/BUSY.mp4';
-import vidAlso from '../assets/animations/ALSO.mp4';
-import vidAttact from '../assets/animations/ATTACK.mp4';
-
-// Master list of videos in order
-const ANIMATION_ASSETS = [
-  vidEasy,   // 0
-  vidEnough, // 1
-  vidFeel,   // 2
-  vidHeavy,  // 3
-  vidOther,  // 4
-  vidPain,   // 5
-  vidBusy,   // 6
-  vidAlso,   // 7
-  vidAttact  // 8
-];
-
-// Define Sequences (Indices from the list above)
-const SEQ_ODD = [0, 1, 2, 3, 4, 5]; // 1 to 6
-const SEQ_EVEN = [3, 4, 5, 6, 7, 8]; // 4 to 9
-
 const TRANSITION_DURATION = 0.25; // 250ms overlap
 
-const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botResponseCount }) => {
+const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botResponseCount, signSequence }) => {
   // --- WEBCAM REFS (TOUCHED NOTHING HERE) ---
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -43,7 +17,7 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
   const isRecordingRef = useRef(isRecording);
   const isBusyRef = useRef(false);
 
-  // --- AVATAR ANIMATION REFS ---
+  // --- AVATAR ANIMATION REFS (DOUBLE BUFFER) ---
   const player1Ref = useRef(null);
   const player2Ref = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false); 
@@ -107,7 +81,7 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
               formData.append('file', blob, 'frame.jpg');
 
               try {
-                const response = await axios.post('http://localhost:8000/predict-frame', formData, {
+                const response = await axios.post(`${AI_ENGINE_URL}/predict-frame`, formData, {
                   headers: { 'Content-Type': 'multipart/form-data' }
                 });
 
@@ -138,21 +112,22 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
   }, [isRecording, cameraActive, onGlossDetected]);
 
   // =========================================================
-  // 🔵 SECTION 2: AVATAR ANIMATION ENGINE (FIXED)
+  // 🔵 SECTION 2: AVATAR ANIMATION ENGINE (RESTORED DOUBLE BUFFER)
   // =========================================================
 
   // Trigger animation when botResponseCount changes
   useEffect(() => {
-    if (botResponseCount > 0) {
-      playSequence(botResponseCount % 2 !== 0 ? SEQ_ODD : SEQ_EVEN);
+    if (botResponseCount > 0 && signSequence && signSequence.length > 0) {
+      playSequence(signSequence);
     }
-  }, [botResponseCount]);
+  }, [botResponseCount, signSequence]);
 
-  const playSequence = (sequenceIndices) => {
-    console.log("Starting Animation Sequence:", sequenceIndices);
+  const playSequence = (signs) => {
+    console.log("Starting Animation Sequence:", signs);
+    prefetchVideos(signs);
     
-    // Map indices to actual video files
-    const playlist = sequenceIndices.map(idx => ANIMATION_ASSETS[idx]);
+    // Map signs to actual Cloudflare R2 video URLs
+    const playlist = signs.map(sign => `${R2_URL}/${sign}.mp4`);
     
     playlistRef.current = playlist;
     currentVideoIndexRef.current = 0;

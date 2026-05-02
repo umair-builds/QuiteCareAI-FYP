@@ -11,4 +11,8 @@ const BACKEND_URL =
 
 export const API_BASE = BACKEND_URL;
 
+export const R2_URL = "https://pub-c4751c4c00514714b4e7a941dd0d90d1.r2.dev/animations";
+
+export const AI_ENGINE_URL = "https://umair-builds-quietcare-ai-engine.hf.space";
+
 export default API_BASE;
