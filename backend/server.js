@@ -8,14 +8,18 @@ const app = express();
 // --- CORS Configuration ---
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://quite-care-ai-fyp-imz9.vercel.app',
+  'https://quite-care-ai-fyp-imz9.vercel.app', // Vercel default
+  'https://quietcareai.app',                   // Your custom domain
+  'https://www.quietcareai.app'               // Your custom domain with www
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
+    // The !origin check allows mobile apps and tools like Postman
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log("CORS Blocked Origin:", origin); // This helps you see the error in Vercel logs
       callback(new Error(`CORS blocked: ${origin}`));
     }
   },
