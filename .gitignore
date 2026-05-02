@@ -33,3 +33,7 @@ nohup.out
 
 # LOCK FILES (optional - uncomment if you prefer not to track these)
 # package-lock.json
+
+# LARGE ML MODELS (Hosted Separately)
+*.keras
+ai_engine/models/
