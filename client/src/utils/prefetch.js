@@ -20,7 +20,7 @@ export const prefetchVideos = (signsArray) => {
     if (!link) {
       link = document.createElement('link');
       link.rel = 'preload';
-      link.as = 'video';
+      link.as = 'fetch';
       link.href = videoUrl;
       link.type = 'video/mp4';
       document.head.appendChild(link);

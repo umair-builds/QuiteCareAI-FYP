@@ -9,6 +9,13 @@ import welcomeVideo from '../assets/welcome.mp4';
 
 const TRANSITION_DURATION = 0.25; // 250ms overlap
 
+// --- FALLBACK SYSTEM (PLACEHOLDER MODE) ---
+// Using only the videos you have confirmed are available in R2.
+const FALLBACK_POOL = [
+  'easy', 'enough', 'feel', 'heavy', 'other', 
+  'pain', 'busy', 'also', 'attack'
+]; 
+
 const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botResponseCount, signSequence }) => {
   // --- WEBCAM REFS (TOUCHED NOTHING HERE) ---
   const videoRef = useRef(null);
@@ -117,10 +124,15 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
 
   // Trigger animation when botResponseCount changes
   useEffect(() => {
-    if (botResponseCount > 0 && signSequence && signSequence.length > 0) {
-      playSequence(signSequence);
+    if (botResponseCount > 0) {
+      // PLACEHOLDER MODE: Ignore actual signs and pick 5 random safe ones
+      const randomSigns = Array.from({ length: 5 }, () => 
+        FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)]
+      );
+      
+      playSequence(randomSigns);
     }
-  }, [botResponseCount, signSequence]);
+  }, [botResponseCount]); // Ignore signSequence for now
 
   const playSequence = (signs) => {
     console.log("Starting Animation Sequence:", signs);
