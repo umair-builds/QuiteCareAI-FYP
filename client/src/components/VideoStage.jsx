@@ -35,7 +35,7 @@ const SEQ_EVEN = [3, 4, 5, 6, 7, 8]; // 4 to 9
 
 const TRANSITION_DURATION = 0.25; // 250ms overlap
 
-const VideoStage = ({ isRecording, onGlossDetected, botResponseCount }) => {
+const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botResponseCount }) => {
   // --- WEBCAM REFS (TOUCHED NOTHING HERE) ---
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -111,8 +111,15 @@ const VideoStage = ({ isRecording, onGlossDetected, botResponseCount }) => {
                   headers: { 'Content-Type': 'multipart/form-data' }
                 });
 
+                // Always forward the per-frame emotion to the buffer in MainChat
+                const frameEmotion = response.data.emotion;
+                if (frameEmotion && onEmotionDetected) {
+                  onEmotionDetected(frameEmotion);
+                }
+
+                // Only fire onGlossDetected when a new sign word is confirmed
                 if (response.data.gloss) {
-                  onGlossDetected(response.data.gloss);
+                  onGlossDetected(response.data.gloss, frameEmotion);
                 }
               } catch (error) {
                 // console.error("Frame dropped (Server busy)");

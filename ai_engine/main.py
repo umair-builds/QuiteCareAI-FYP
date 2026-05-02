@@ -42,9 +42,22 @@ def home():
 
 @app.post("/predict-frame")
 async def predict_frame(file: UploadFile = File(...)):
+    """
+    Returns per-frame sign and emotion data.
+    Response shape:
+      {
+        "gloss":   string | null,   ← confirmed sign word (null when mid-gesture)
+        "sign":    string | null,   ← same as gloss (alias for clarity)
+        "emotion": string           ← live FER emotion for this frame
+      }
+    """
     image_bytes = await file.read()
-    detected_gloss = sign_engine.process_frame(image_bytes)
-    return {"gloss": detected_gloss}
+    result = sign_engine.process_frame(image_bytes)
+    return {
+        "gloss":   result["sign"],   # backward-compat alias kept for VideoStage
+        "sign":    result["sign"],
+        "emotion": result["emotion"],
+    }
 
 @app.post("/translate")
 async def translate_gloss(gloss_text: str = Form(...)):
@@ -161,7 +174,16 @@ async def chat_response(request: Request):
         
         if not user_text:
             raise HTTPException(status_code=400, detail="user_text is required")
-        
+
+        # EMOTION PIPELINE LOG
+        # Visible in the uvicorn terminal so you can confirm emotion is reaching
+        # the backend during live testing.
+        sep = "-" * 52
+        print(f"\n{sep}")
+        print(f"  [EMOTION RECEIVED] --> {emotion.upper()}")
+        print(f"  [USER TEXT]        --> \"{user_text[:60]}{'...' if len(user_text) > 60 else ''}\"")
+        print(sep)
+
         return await _run_aria_pipeline(user_text, emotion, history)
         
     except HTTPException:

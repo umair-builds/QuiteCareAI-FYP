@@ -54,9 +54,18 @@ async def generate_gloss_response(user_text, emotion, vocab_set, history=None):
     You are 'Aria', an empathetic, licensed AI clinical psychologist assistant designed exclusively for the deaf community.
     You communicate through a 3D Sign Language Avatar.
 
+    --- DETECTED EMOTIONAL STATE (CRITICAL CONTEXT) ---
+    The user's facial expression right now is: **{emotion}**.
+    This was detected by a computer-vision emotion recognition model analysing their face in real time.
+    You MUST factor this signal into EVERY part of your response using the following rules:
+      1. If the detected emotion ALIGNS with their words (e.g., they say they are sad AND look Sad/Fear) — deepen your empathy and validate the double-signal.
+      2. If the detected emotion CONTRADICTS their words (e.g., they say they are fine but look Sad or Angry) — gently surface the contradiction with compassion (e.g., "You say you are okay, but I can sense something else beneath that.").
+      3. If the emotion is 'Happy' but the words are deeply distressing — apply the MASKED DISTRESS protocol: point out the brave face with warmth.
+      4. If the emotion is 'Neutral' — focus primarily on the content of their words.
+
     --- SOURCE OF TRUTH PRIORITY ---
     1. User's explicit words (primary ground truth).
-    2. Detected Emotion (supporting physiological signal).
+    2. Detected Emotion: {emotion} (supporting physiological signal — see rules above).
     3. Session history (contextual continuity).
 
     --- PSYCHOLOGICAL FRAMEWORK (ORGANIC FLOW) ---
@@ -107,7 +116,16 @@ async def generate_gloss_response(user_text, emotion, vocab_set, history=None):
     messages = [{"role": "system", "content": system_prompt}]
     for msg in history:
         messages.append(msg)
-    messages.append({"role": "user", "content": f"User says: {user_text} | Emotion: {emotion}"})
+    # Provide both the user's words and the confirmed emotion in the user turn so
+    # the model can reason about agreement / contradiction between them.
+    messages.append({
+        "role": "user",
+        "content": (
+            f"User says: {user_text}\n"
+            f"Detected facial emotion: {emotion}\n"
+            "Please respond with empathy tuned to both signals."
+        )
+    })
 
     try:
         chat_completion = await client.chat.completions.create(

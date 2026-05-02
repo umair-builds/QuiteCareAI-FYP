@@ -6,6 +6,8 @@ import torch.nn as nn
 import mediapipe as mp
 from collections import deque, Counter
 
+from emotion_predictor import EmotionDetector
+
 # --- PATHS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
@@ -57,6 +59,9 @@ class SignPredictor:
         self.labels = self.load_labels()
         self.model = self.load_model()
         self.mean, self.std = self.load_stats()
+
+        # --- EMOTION ENGINE ---
+        self.emotion_detector = EmotionDetector()
         
         self.sequence_buffer = deque(maxlen=SEQUENCE_LENGTH)
         self.prediction_queue = deque(maxlen=PREDICTION_QUEUE_LENGTH)
@@ -109,6 +114,24 @@ class SignPredictor:
             rh = np.zeros(21 * 3, dtype=np.float32)
         return np.concatenate([pose, face, lh, rh]).astype(np.float32)
 
+    def _get_face_bounding_box(self, results, frame_shape):
+        """
+        Derives a pixel-space bounding box (x, y, w, h) from MediaPipe face
+        landmarks so that we do NOT need a second face-detection model.
+        Returns None when no face is detected.
+        """
+        if not results.face_landmarks:
+            return None
+
+        h_img, w_img = frame_shape[:2]
+        xs = [lm.x * w_img for lm in results.face_landmarks.landmark]
+        ys = [lm.y * h_img for lm in results.face_landmarks.landmark]
+
+        x_min, x_max = int(min(xs)), int(max(xs))
+        y_min, y_max = int(min(ys)), int(max(ys))
+
+        return (x_min, y_min, x_max - x_min, y_max - y_min)  # x, y, w, h
+
     def process_frame(self, image_bytes):
         nparr = np.frombuffer(image_bytes, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -118,6 +141,15 @@ class SignPredictor:
         results = self.holistic.process(rgb)
         kp = self.extract_keypoints(results)
         self.frame_counter += 1
+
+        # --- EMOTION PREDICTION (runs every frame) ---
+        detected_emotion = "Neutral"
+        face_bbox = self._get_face_bounding_box(results, frame.shape)
+        if face_bbox is not None:
+            try:
+                detected_emotion = self.emotion_detector.predict_emotion(frame, face_bbox)
+            except Exception as e:
+                print(f"[EmotionDetector] Skipped frame: {e}")
 
         if self.mean is not None:
             norm_kp = (kp - self.mean) / (self.std + 1e-8)
@@ -169,8 +201,8 @@ class SignPredictor:
                 self.state = "IDLE"
                 print("Stopped Recording.")
 
-        # --- PREDICTION ---
-        final_prediction = None
+        # --- SIGN PREDICTION ---
+        final_sign = None
         is_prediction_time = (len(self.sequence_buffer) == SEQUENCE_LENGTH and 
                               self.frame_counter % PREDICTION_RATE == 0)
 
@@ -195,10 +227,11 @@ class SignPredictor:
                 if stable_count >= needed_count:
                     if stable_pred != self.last_confirmed_word:
                         self.last_confirmed_word = stable_pred
-                        final_prediction = stable_pred
+                        final_sign = stable_pred
                         print(f"PREDICTED: {stable_pred} ({conf_val:.2f})")
                         self.prediction_queue.clear() 
             else:
                  self.prediction_queue.clear()
 
-        return final_prediction
+        # Return BOTH the sign prediction AND the live emotion for this frame
+        return {"sign": final_sign, "emotion": detected_emotion}

@@ -35,6 +35,38 @@ const MainChat = () => {
   const [textInput, setTextInput] = useState('');
   const [isBotThinking, setIsBotThinking] = useState(false);
 
+  // --- EMOTION BUFFER ---
+  // Collects the live emotion label from every /predict-frame response.
+  // When the user presses Enter we compute the statistical mode and send it
+  // to Aria so the LLM can personalise its empathetic response.
+  const [emotionBuffer, setEmotionBuffer] = useState([]);
+  // Stores the last emotion sent to Aria — shown as a sleek badge, auto-clears
+  const [lastSentEmotion, setLastSentEmotion] = useState(null);
+
+  // Auto-clear the emotion badge after 4 seconds
+  useEffect(() => {
+    if (!lastSentEmotion) return;
+    const timer = setTimeout(() => setLastSentEmotion(null), 4000);
+    return () => clearTimeout(timer);
+  }, [lastSentEmotion]);
+
+  // Helper: return the most-frequent element in an array of strings.
+  // Falls back to 'Neutral' if the array is empty.
+  const calculateMode = (arr) => {
+    if (!arr || arr.length === 0) return 'Neutral';
+    const freq = {};
+    let maxCount = 0;
+    let mode = arr[0];
+    for (const item of arr) {
+      freq[item] = (freq[item] || 0) + 1;
+      if (freq[item] > maxCount) {
+        maxCount = freq[item];
+        mode = item;
+      }
+    }
+    return mode;
+  };
+
   // --- BACKGROUND AUTO-SAVE [NEW] ---
   useEffect(() => {
     const autoSave = async () => {
@@ -123,7 +155,12 @@ const MainChat = () => {
     }
   };
 
-  const handleGlossDetected = (newGloss) => {
+  const handleGlossDetected = (newGloss, emotion) => {
+    // Push emotion into the buffer every time VideoStage fires a frame result
+    if (emotion) {
+      setEmotionBuffer(prev => [...prev, emotion]);
+    }
+
     if (isAiOutput) {
       setIsAiOutput(false);
       setCurrentGlosses([]);
@@ -174,6 +211,12 @@ const MainChat = () => {
 
     const rawGlossText = currentGlosses.join(" ");
 
+    // ── EMOTION BUFFER: calculate mode then clear for next sentence ──────────
+    const finalEmotion = calculateMode(emotionBuffer);
+    setEmotionBuffer([]);        // reset buffer — next sentence starts fresh
+    setLastSentEmotion(finalEmotion);  // show badge in UI
+    console.log(`[EmotionBuffer] Mode emotion sent to Aria: ${finalEmotion}`);
+
     // Temporarily show the "Translating" message
     setMessages(prev => [...prev, { sender: 'user', text: `[${rawGlossText}] ... Translating` }]);
 
@@ -197,6 +240,8 @@ const MainChat = () => {
 
       const chatFormData = new FormData();
       chatFormData.append('user_text', userSentence);
+      // ── Send the emotion mode so Aria can tailor its empathetic response ─────
+      chatFormData.append('emotion', finalEmotion);
 
       const botResponse = await axios.post('http://localhost:8000/chat-response', chatFormData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -301,8 +346,30 @@ const MainChat = () => {
                   <VideoStage
                     isRecording={isRecording}
                     onGlossDetected={handleGlossDetected}
+                    onEmotionDetected={(emotion) => setEmotionBuffer(prev => [...prev, emotion])}
                     botResponseCount={responseCount}
                   />
+
+                  {/* EMOTION CHIP — subtle, matches app theme */}
+                  <style>{`
+                    @keyframes chipFade {
+                      from { opacity: 0; transform: translateY(-4px); }
+                      to   { opacity: 1; transform: translateY(0); }
+                    }
+                    .emotion-chip { animation: chipFade 0.25s ease forwards; }
+                  `}</style>
+
+                  {lastSentEmotion && (
+                    <div key={lastSentEmotion} className="flex justify-center mb-1">
+                      <span className="emotion-chip inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 rounded-md px-2.5 py-1 select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                        <span className="text-[10px] text-gray-400 font-medium">Detected emotion</span>
+                        <span className="text-[10px] font-semibold text-gray-800 font-mono uppercase tracking-wide">
+                          {lastSentEmotion}
+                        </span>
+                      </span>
+                    </div>
+                  )}
 
                   <div className="mb-2 text-center px-4">
                     {isRecording ? (
