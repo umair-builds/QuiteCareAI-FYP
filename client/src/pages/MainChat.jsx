@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Bot } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearReplaySequence } from '../features/chat/chatSlice';
+import API_BASE from '../services/api';
 
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -79,7 +80,7 @@ const MainChat = () => {
         }
 
         try {
-          const res = await axios.post('http://localhost:5005/api/chat/save', {
+          const res = await axios.post(`${API_BASE}/api/chat/save`, {
             userId: user.id || user._id,
             chatId: currentChatId,
             existingTitle: chatTitle,
@@ -126,7 +127,7 @@ const MainChat = () => {
 
   const handleLoadSession = async (chatId) => {
     try {
-      const res = await axios.get(`http://localhost:5005/api/chat/${chatId}`);
+      const res = await axios.get(`${API_BASE}/api/chat/${chatId}`);
 
       setMessages(res.data.messages);
       setSessionStarted(true);

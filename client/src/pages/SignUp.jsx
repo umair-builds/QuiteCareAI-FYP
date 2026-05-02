@@ -2,11 +2,10 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify'; // Import Toast logic
-
-// --- 1. NEW LOGIC IMPORTS ---
+import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { login } from '../features/auth/authSlice';
+import API_BASE from '../services/api';
 
 const SignUp = () => {
   const { 
@@ -28,7 +27,7 @@ const SignUp = () => {
 
     try {
         // 2. Send data to Backend
-        const response = await fetch('http://localhost:5005/api/auth/signup', {
+        const response = await fetch(`${API_BASE}/api/auth/signup`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

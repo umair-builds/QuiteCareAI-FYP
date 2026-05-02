@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { useNavigate, Link } from 'react-router-dom';
+import API_BASE from '../services/api';
 
 const ForgotPassword = () => {
   const { 
@@ -17,7 +18,7 @@ const ForgotPassword = () => {
     const loadingToast = toast.loading("Sending OTP...");
     
     try {
-      const response = await fetch('http://localhost:5005/api/auth/forgot-password', {
+      const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

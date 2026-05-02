@@ -4,10 +4,8 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
-
-// --- FIXED IMPORT PATH (Matches your folder structure) ---
 import { login } from '../features/auth/authSlice';
-// -------------------------------------------------------
+import API_BASE from '../services/api';
 
 const SignIn = () => {
   const {
@@ -23,7 +21,7 @@ const SignIn = () => {
     const loadingToast = toast.loading("Signing you in...");
 
     try {
-      const response = await fetch('http://localhost:5005/api/auth/signin', {
+      const response = await fetch(`${API_BASE}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

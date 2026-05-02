@@ -3,6 +3,7 @@ import { MessageSquare, Plus, Trash2, MoreHorizontal, Edit2, Pin } from 'lucide-
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import API_BASE from '../services/api';
 
 const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const { user } = useSelector((state) => state.auth);
@@ -15,7 +16,7 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const fetchHistory = async () => {
     if (user) {
       try {
-        const res = await axios.get(`http://localhost:5005/api/chat/history/${user.id || user._id}`);
+        const res = await axios.get(`${API_BASE}/api/chat/history/${user.id || user._id}`);
         setHistory(res.data);
       } catch (err) {
         console.error("Error loading history:", err);
@@ -33,7 +34,7 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const handleDelete = async (chatId) => {
     setOpenMenuId(null); // Close the menu
     try {
-      await axios.delete(`http://localhost:5005/api/chat/${chatId}`);
+      await axios.delete(`${API_BASE}/api/chat/${chatId}`);
       toast.success("Session deleted", { duration: 2000 });
       fetchHistory(); 
       if (onSessionDeleted) {
