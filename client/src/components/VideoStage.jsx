@@ -13,7 +13,7 @@ const TRANSITION_DURATION = 0.25; // 250ms overlap
 // Using only the videos you have confirmed are available in R2.
 const FALLBACK_POOL = [
   'EASY', 'ENOUGH', 'FEEL', 'HEAVY', 'OTHER',
-  'PAIN', 'BUSY', 'ALSO', 'ATTACK'
+  'BUSY', 'ALSO', 'ATTACK'
 ];
 
 const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botResponseCount, signSequence }) => {
