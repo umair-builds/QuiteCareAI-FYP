@@ -234,11 +234,11 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 h-[350px] w-full mb-6">
+    <div className="flex flex-col md:flex-row gap-4 h-auto md:h-[350px] w-full mb-6">
       <canvas ref={canvasRef} className="hidden" />
 
       {/* LEFT: USER INPUT */}
-      <div className={`flex-1 rounded-xl overflow-hidden relative shadow-md border-2 transition-colors ${isRecording ? 'border-red-500' : 'border-gray-200'}`}>
+      <div className={`flex-1 rounded-xl overflow-hidden relative shadow-md border-2 transition-colors aspect-video md:aspect-auto ${isRecording ? 'border-red-500' : 'border-gray-200'}`}>
         <div className="bg-black w-full h-full">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
         </div>
@@ -255,7 +255,7 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
       </div>
 
       {/* RIGHT: AVATAR OUTPUT */}
-      <div className="flex-1 bg-gray-100 rounded-xl flex flex-col items-center justify-center relative shadow-md border border-gray-200 overflow-hidden">
+      <div className="flex-1 bg-gray-100 rounded-xl flex flex-col items-center justify-center relative shadow-md border border-gray-200 overflow-hidden aspect-video md:aspect-auto">
 
         {/* 1. IDLE LOOP (Ensured NO LOOP so it plays once) */}
         <video

@@ -35,6 +35,7 @@ const MainChat = () => {
   // Text input state
   const [textInput, setTextInput] = useState('');
   const [isBotThinking, setIsBotThinking] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // --- EMOTION BUFFER ---
   // Collects the live emotion label from every /predict-frame response.
@@ -325,13 +326,23 @@ const MainChat = () => {
           onNewSession={handleNewSession}
           onLoadSession={handleLoadSession}
           onSessionDeleted={handleDeleteActiveSession}
+          isMobileOpen={isMobileMenuOpen}
+          setIsMobileOpen={setIsMobileMenuOpen}
         />
 
         <div className="flex-1 flex flex-col relative h-full">
           <div className="h-10 border-b border-gray-100 flex items-center justify-between px-4 bg-white shrink-0">
-            <h2 className="font-semibold text-sm text-gray-800">
-              {sessionStarted ? "Current Session" : "Welcome"}
-            </h2>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="md:hidden p-1 -ml-1 rounded-md hover:bg-gray-100 text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+              </button>
+              <h2 className="font-semibold text-sm text-gray-800">
+                {sessionStarted ? "Current Session" : "Welcome"}
+              </h2>
+            </div>
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${isRecording ? 'bg-red-500 animate-ping' : 'bg-green-500'}`}></span>
               <span className="text-[10px] uppercase font-bold text-gray-500">
@@ -373,9 +384,9 @@ const MainChat = () => {
                     </div>
                   )}
 
-                  <div className="mb-2 text-center px-4">
+                  <div className="mb-2 text-center px-1 md:px-4">
                     {isRecording ? (
-                      <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border border-blue-100 block w-full min-h-[35px] flex items-center justify-center">
+                      <span className="bg-blue-50 text-blue-700 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border border-blue-100 block w-full min-h-[35px] flex items-center justify-center">
                         {currentGlosses.length > 0 ? currentGlosses.join(" ") : "Waiting for signs..."}
                       </span>
                     ) : (
@@ -386,13 +397,13 @@ const MainChat = () => {
                           onChange={handleManualEdit}
                           disabled={isAiOutput}
                           placeholder={isAiOutput ? "AI Response (Click Start to reply)" : "Type or correct signs here..."}
-                          className={`w-full px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${isAiOutput
+                          className={`w-full px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${isAiOutput
                             ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
                             : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500'
                             }`}
                         />
                         {!isAiOutput && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
+                          <span className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
                             EDIT MODE
                           </span>
                         )}

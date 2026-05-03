@@ -205,11 +205,20 @@ const SessionRow = ({ chat, openMenuId, setOpenMenuId, onLoadSession, onPin, onR
 /* ─────────────────────────────────────────────
    Main Sidebar Component
 ───────────────────────────────────────────── */
-const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
+const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted, isMobileOpen, setIsMobileOpen }) => {
   const { user } = useSelector((state) => state.auth);
   const [history, setHistory] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [renameTarget, setRenameTarget] = useState(null); // session to rename
+  const [renameTarget, setRenameTarget] = useState(null);
+
+  // Swipe logic for mobile
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e) => (touchStartX.current = e.touches[0].clientX);
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current - e.changedTouches[0].clientX > 50) {
+      setIsMobileOpen(false); // Swipe left closes sidebar
+    }
+  };
 
   /* ── Fetch History ── */
   const fetchHistory = async () => {
@@ -299,7 +308,10 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const sharedRowProps = {
     openMenuId,
     setOpenMenuId,
-    onLoadSession,
+    onLoadSession: (id) => {
+      onLoadSession(id);
+      if (window.innerWidth < 768 && setIsMobileOpen) setIsMobileOpen(false);
+    },
     onPin: handlePin,
     onRename: (chat) => setRenameTarget(chat),
     onDelete: handleDelete,
@@ -309,7 +321,22 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   /* ─────────── RENDER ─────────── */
   return (
     <>
-      <div className="w-64 bg-gray-50 h-full border-r border-gray-200 flex flex-col hidden md:flex overflow-hidden">
+      {/* ── MOBILE BACKDROP ── */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 md:hidden transition-opacity"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* ── SIDEBAR CONTAINER ── */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-50 h-full border-r border-gray-200 flex flex-col overflow-hidden transform transition-transform duration-300 ease-out md:relative md:translate-x-0 ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
 
         {/* Hide scrollbar utility */}
         <style>{`
@@ -320,7 +347,10 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
         {/* NEW SESSION BUTTON */}
         <div className="p-3 flex-shrink-0">
           <button
-            onClick={onNewSession}
+            onClick={() => {
+              onNewSession();
+              if (window.innerWidth < 768 && setIsMobileOpen) setIsMobileOpen(false);
+            }}
             className="w-full flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-all text-gray-700 shadow-sm group"
           >
             <div className="bg-gray-50 p-1 rounded-md border border-gray-200 group-hover:bg-white transition-colors">
