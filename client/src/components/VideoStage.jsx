@@ -99,7 +99,7 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
 
               try {
                 const response = await axios.post(`${AI_ENGINE_URL}/predict-frame`, formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' }
+                  headers: { 'Content-Type': 'multipart/form-data', 'ngrok-skip-browser-warning': '1' }
                 });
 
                 // Always forward the per-frame emotion to the buffer in MainChat
