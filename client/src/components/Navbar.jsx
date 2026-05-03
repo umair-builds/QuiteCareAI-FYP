@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
+import logo from '../assets/quietcareai.png';
 
 const Navbar = ({ page }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -41,16 +42,12 @@ const Navbar = ({ page }) => {
       {/* On Chat page, logo is static (cursor-default) so users don't accidentally leave */}
       {page === 'chat' ? (
         <div className="flex items-center gap-2 cursor-default select-none">
-          <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-semibold">Q</span>
-          </div>
+          <img src={logo} alt="QuietCare AI Logo" className="w-8 h-8 object-contain" />
           <span className="text-gray-900 text-xl font-bold tracking-tight">QuietCare AI</span>
         </div>
       ) : (
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center transition-transform hover:scale-105">
-            <span className="text-white text-sm font-semibold">Q</span>
-          </div>
+          <img src={logo} alt="QuietCare AI Logo" className="w-8 h-8 object-contain transition-transform hover:scale-105" />
           <span className="text-gray-900 text-xl font-bold tracking-tight">QuietCare AI</span>
         </Link>
       )}
