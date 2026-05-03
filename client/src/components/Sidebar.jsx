@@ -245,22 +245,38 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
   const handlePin = async (chat) => {
     setOpenMenuId(null);
 
-    // Optimistic UI update
     const wasPinned = chat.isPinned;
-    setHistory((prev) =>
-      prev.map((c) =>
+
+    // ── CLIENT-SIDE GUARD: block before any UI update ──
+    if (!wasPinned && pinned.length >= 3) {
+      toast.error("Max 3 sessions can be pinned. Unpin one first.", { duration: 3000 });
+      return;
+    }
+
+    const newPinnedAt = wasPinned ? null : new Date().toISOString();
+
+    // Optimistic UI: update + re-sort so newly pinned floats to top
+    setHistory((prev) => {
+      const updated = prev.map((c) =>
         c._id === chat._id
-          ? { ...c, isPinned: !wasPinned, pinnedAt: wasPinned ? null : new Date().toISOString() }
+          ? { ...c, isPinned: !wasPinned, pinnedAt: newPinnedAt }
           : c
-      )
-    );
+      );
+      // Re-sort: pinned first (newest pinnedAt first), then unpinned by createdAt desc
+      return updated.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        if (a.isPinned && b.isPinned) return new Date(b.pinnedAt) - new Date(a.pinnedAt);
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+    });
 
     try {
       await axios.patch(`${API_BASE}/api/chat/${chat._id}/pin`);
       toast.success(wasPinned ? "Session unpinned" : "Session pinned 📌", { duration: 2000 });
-      fetchHistory(); // Sync from server to ensure correct order
+      fetchHistory(); // Final sync with server
     } catch (err) {
-      // Revert optimistic update on error
+      // Revert on API error
       setHistory((prev) =>
         prev.map((c) =>
           c._id === chat._id ? { ...c, isPinned: wasPinned, pinnedAt: chat.pinnedAt } : c
