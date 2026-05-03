@@ -9,16 +9,18 @@ const chatSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    default: 'New Session' // Added default as a safety net
+    default: 'New Session'
   },
   messages: [
     {
       sender: { type: String, enum: ['user', 'bot'], required: true },
       text: { type: String, required: true },
-      signSequence: { type: [String], default: [] }, // <-- [NEW] Stores the sign video names!
+      signSequence: { type: [String], default: [] },
       timestamp: { type: Date, default: Date.now }
     }
   ],
+  isPinned: { type: Boolean, default: false },
+  pinnedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 
