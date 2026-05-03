@@ -384,9 +384,9 @@ const MainChat = () => {
                     </div>
                   )}
 
-                  <div className="mb-2 text-center px-4">
+                  <div className="mb-2 text-center px-1 md:px-4">
                     {isRecording ? (
-                      <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border border-blue-100 block w-full min-h-[35px] flex items-center justify-center">
+                      <span className="bg-blue-50 text-blue-700 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border border-blue-100 block w-full min-h-[35px] flex items-center justify-center">
                         {currentGlosses.length > 0 ? currentGlosses.join(" ") : "Waiting for signs..."}
                       </span>
                     ) : (
@@ -397,13 +397,13 @@ const MainChat = () => {
                           onChange={handleManualEdit}
                           disabled={isAiOutput}
                           placeholder={isAiOutput ? "AI Response (Click Start to reply)" : "Type or correct signs here..."}
-                          className={`w-full px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${isAiOutput
+                          className={`w-full px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${isAiOutput
                             ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
                             : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500'
                             }`}
                         />
                         {!isAiOutput && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
+                          <span className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
                             EDIT MODE
                           </span>
                         )}
