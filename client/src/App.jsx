@@ -16,6 +16,9 @@ import MainChat from './pages/MainChat';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthRoute from './components/AuthRoute';
+
 function App() {
   return (
     <>
@@ -27,9 +30,21 @@ function App() {
       
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/chat" element={<MainChat />} />
+        <Route path="/signin" element={
+          <AuthRoute>
+            <SignIn />
+          </AuthRoute>
+        } />
+        <Route path="/signup" element={
+          <AuthRoute>
+            <SignUp />
+          </AuthRoute>
+        } />
+        <Route path="/chat" element={
+          <ProtectedRoute>
+            <MainChat />
+          </ProtectedRoute>
+        } />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>

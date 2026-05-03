@@ -48,8 +48,18 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
   useEffect(() => {
     const startWebcam = async () => {
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.error("Camera API not available. Are you using HTTP on a mobile network? The Camera requires HTTPS or localhost.");
+          return;
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, frameRate: 30 }
+          video: { 
+            facingMode: "user", // Force front camera on phones
+            width: { ideal: 640 }, 
+            height: { ideal: 480 }, 
+            frameRate: { ideal: 30 } 
+          }
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;

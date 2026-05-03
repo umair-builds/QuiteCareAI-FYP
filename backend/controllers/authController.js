@@ -1,6 +1,13 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
+
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'default_secret_key_123', {
+    expiresIn: '7d',
+  });
+};
 
 // --- EMAIL TRANSPORTER (credentials from .env) ---
 const transporter = nodemailer.createTransport({
@@ -40,7 +47,8 @@ exports.signup = async (req, res) => {
 
     res.status(201).json({ 
       message: "User created successfully!", 
-      user: { id: savedUser._id, username: savedUser.username, email: savedUser.email } 
+      user: { id: savedUser._id, username: savedUser.username, email: savedUser.email },
+      token: generateToken(savedUser._id)
     });
   } catch (err) {
     console.error("❌ ERROR:", err.message);
@@ -70,7 +78,7 @@ exports.signin = async (req, res) => {
         username: user.username,
         email: user.email
       },
-      token: "dummy-token-for-now"
+      token: generateToken(user._id)
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
