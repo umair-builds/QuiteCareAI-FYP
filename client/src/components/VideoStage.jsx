@@ -134,15 +134,10 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
 
   // Trigger animation when botResponseCount changes
   useEffect(() => {
-    if (botResponseCount > 0) {
-      // PLACEHOLDER MODE: Ignore actual signs and pick 5 random safe ones
-      const randomSigns = Array.from({ length: 5 }, () =>
-        FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)]
-      );
-
-      playSequence(randomSigns);
+    if (botResponseCount > 0 && signSequence && signSequence.length > 0) {
+      playSequence(signSequence);
     }
-  }, [botResponseCount]); // Ignore signSequence for now
+  }, [botResponseCount, signSequence]);
 
   const playSequence = (signs) => {
     console.log("Starting Animation Sequence:", signs);
