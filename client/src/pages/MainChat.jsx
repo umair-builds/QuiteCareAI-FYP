@@ -227,7 +227,7 @@ const MainChat = () => {
       formData.append('gloss_text', rawGlossText);
 
       const transResponse = await axios.post(`${AI_ENGINE_URL}/translate`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data', 'ngrok-skip-browser-warning': '1' }
       });
       const userSentence = transResponse.data.sentence;
 
@@ -246,7 +246,7 @@ const MainChat = () => {
       chatFormData.append('emotion', finalEmotion);
 
       const botResponse = await axios.post(`${AI_ENGINE_URL}/chat-response`, chatFormData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data', 'ngrok-skip-browser-warning': '1' }
       });
 
       const { natural_response, animation_sequence } = botResponse.data;
@@ -289,7 +289,7 @@ const MainChat = () => {
       const formData = new FormData();
       formData.append('user_text', text);
       const botResponse = await axios.post(`${AI_ENGINE_URL}/chat-response`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data', 'ngrok-skip-browser-warning': '1' }
       });
       const { natural_response, animation_sequence } = botResponse.data;
 

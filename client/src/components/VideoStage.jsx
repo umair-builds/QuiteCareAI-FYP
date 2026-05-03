@@ -99,7 +99,7 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
 
               try {
                 const response = await axios.post(`${AI_ENGINE_URL}/predict-frame`, formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' }
+                  headers: { 'Content-Type': 'multipart/form-data', 'ngrok-skip-browser-warning': '1' }
                 });
 
                 // Always forward the per-frame emotion to the buffer in MainChat
@@ -135,14 +135,15 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
   // Trigger animation when botResponseCount changes
   useEffect(() => {
     if (botResponseCount > 0) {
-      // PLACEHOLDER MODE: Ignore actual signs and pick 5 random safe ones
+      // We are forcing PLACEHOLDER MODE because the R2 bucket is missing most vocabulary videos.
+      // E.g. 'hello', 'happy', 'reach' are NOT uploaded to R2 yet.
       const randomSigns = Array.from({ length: 5 }, () =>
         FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)]
       );
 
       playSequence(randomSigns);
     }
-  }, [botResponseCount]); // Ignore signSequence for now
+  }, [botResponseCount]);
 
   const playSequence = (signs) => {
     console.log("Starting Animation Sequence:", signs);
