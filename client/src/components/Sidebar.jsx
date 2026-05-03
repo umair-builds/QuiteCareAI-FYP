@@ -120,7 +120,7 @@ const RenameModal = ({ session, onClose, onRename }) => {
 /* ─────────────────────────────────────────────
    Session Row Component
 ───────────────────────────────────────────── */
-const SessionRow = ({ chat, openMenuId, setOpenMenuId, onLoadSession, onPin, onRename, onDelete }) => {
+const SessionRow = ({ chat, openMenuId, setOpenMenuId, onLoadSession, onPin, onRename, onDelete, pinLimitReached }) => {
   const isMenuOpen = openMenuId === chat._id;
 
   return (
@@ -167,12 +167,17 @@ const SessionRow = ({ chat, openMenuId, setOpenMenuId, onLoadSession, onPin, onR
             {/* Pin / Unpin */}
             <button
               onClick={(e) => { e.stopPropagation(); onPin(chat); }}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-gray-700 transition-colors text-xs"
+              disabled={!chat.isPinned && pinLimitReached}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${
+                !chat.isPinned && pinLimitReached
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}
             >
               {chat.isPinned ? (
                 <><PinOff size={12} className="text-gray-500" /> Unpin</>
               ) : (
-                <><Pin size={12} className="text-gray-500" /> Pin to Top</>
+                <><Pin size={12} className={pinLimitReached ? 'text-gray-300' : 'text-gray-500'} /> Pin to Top</>
               )}
             </button>
             {/* Rename */}
@@ -246,13 +251,6 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
     setOpenMenuId(null);
 
     const wasPinned = chat.isPinned;
-
-    // ── CLIENT-SIDE GUARD: block before any UI update ──
-    if (!wasPinned && pinned.length >= 3) {
-      toast.error("Max 3 sessions can be pinned. Unpin one first.", { duration: 3000 });
-      return;
-    }
-
     const newPinnedAt = wasPinned ? null : new Date().toISOString();
 
     // Optimistic UI: update + re-sort so newly pinned floats to top
@@ -262,7 +260,6 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
           ? { ...c, isPinned: !wasPinned, pinnedAt: newPinnedAt }
           : c
       );
-      // Re-sort: pinned first (newest pinnedAt first), then unpinned by createdAt desc
       return updated.sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
@@ -274,7 +271,7 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
     try {
       await axios.patch(`${API_BASE}/api/chat/${chat._id}/pin`);
       toast.success(wasPinned ? "Session unpinned" : "Session pinned 📌", { duration: 2000 });
-      fetchHistory(); // Final sync with server
+      fetchHistory();
     } catch (err) {
       // Revert on API error
       setHistory((prev) =>
@@ -306,6 +303,7 @@ const Sidebar = ({ onNewSession, onLoadSession, onSessionDeleted }) => {
     onPin: handlePin,
     onRename: (chat) => setRenameTarget(chat),
     onDelete: handleDelete,
+    pinLimitReached: pinned.length >= 3,
   };
 
   /* ─────────── RENDER ─────────── */
