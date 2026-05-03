@@ -4,14 +4,14 @@ import { Play, Pause, Send, RotateCcw, XCircle } from 'lucide-react';
 // [CHECK] Ensure 'isRecording' is in this list
 const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClose }) => {
   
-  const baseBtnClass = "flex flex-col items-center gap-1 px-4 md:px-6 py-2 rounded-lg transition-all active:scale-95 border";
+  const baseBtnClass = "flex flex-col items-center gap-0.5 md:gap-1 px-2 md:px-6 py-1.5 md:py-2 rounded-lg transition-all active:scale-95 border";
 
   // Active = Dark Gray | Inactive = Transparent
   const activeBtnClass = `${baseBtnClass} bg-gray-200 text-gray-900 border-gray-300 shadow-inner`;
   const inactiveBtnClass = `${baseBtnClass} bg-transparent text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-700`;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 mb-2 bg-white rounded-xl shadow-sm border border-gray-100 w-full py-2 px-1 md:px-0">
+    <div className="flex items-center justify-center gap-1 sm:gap-2 md:gap-4 mb-2 bg-white rounded-xl shadow-sm border border-gray-100 w-full py-1.5 px-1 md:px-0">
       
       {/* GROUP 1 */}
       <div className="flex gap-2">
@@ -21,8 +21,8 @@ const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClos
           className={isRecording ? activeBtnClass : inactiveBtnClass} 
           title="Start Recording"
         >
-          <Play size={20} className={isRecording ? "fill-current" : ""} />
-          <span className="text-[10px] font-bold uppercase tracking-wide">Start</span>
+          <Play className={`w-4 h-4 md:w-5 md:h-5 ${isRecording ? "fill-current" : ""}`} />
+          <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-wide">Start</span>
         </button>
 
         {/* PAUSE BUTTON: Selected if isRecording is FALSE */}
@@ -31,8 +31,8 @@ const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClos
           className={!isRecording ? activeBtnClass : inactiveBtnClass} 
           title="Pause Recording"
         >
-          <Pause size={20} className={!isRecording ? "fill-current" : ""} />
-          <span className="text-[10px] font-bold uppercase tracking-wide">Pause</span>
+          <Pause className={`w-4 h-4 md:w-5 md:h-5 ${!isRecording ? "fill-current" : ""}`} />
+          <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-wide">Pause</span>
         </button>
       </div>
 
@@ -41,11 +41,11 @@ const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClos
       {/* GROUP 2 */}
       <button 
         onClick={onEnter} 
-        className="flex flex-col items-center gap-1 bg-[#10a37f] text-white hover:bg-[#0d8a6c] px-8 md:px-10 py-2 rounded-lg transition-all active:scale-95 shadow-md mx-1 md:mx-2"
+        className="flex flex-col items-center gap-0.5 md:gap-1 bg-[#10a37f] text-white hover:bg-[#0d8a6c] px-4 sm:px-6 md:px-10 py-1.5 md:py-2 rounded-lg transition-all active:scale-95 shadow-md mx-0.5 md:mx-2"
         title="Translate Signs"
       >
-        <Send size={20} />
-        <span className="text-[10px] font-bold uppercase tracking-wide">Enter</span>
+        <Send className="w-4 h-4 md:w-5 md:h-5" />
+        <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-wide">Enter</span>
       </button>
 
       <div className="hidden md:block h-8 w-[1px] bg-gray-200"></div>
@@ -53,13 +53,13 @@ const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClos
       {/* GROUP 3 */}
       <div className="flex gap-2">
         <button onClick={onRetake} className={inactiveBtnClass} title="Clear & Retake">
-          <RotateCcw size={20} />
-          <span className="text-[10px] font-bold uppercase tracking-wide">Retake</span>
+          <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
+          <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-wide">Retake</span>
         </button>
 
         <button onClick={onClose} className={inactiveBtnClass} title="Close Session">
-          <XCircle size={20} />
-          <span className="text-[10px] font-bold uppercase tracking-wide">Close</span>
+          <XCircle className="w-4 h-4 md:w-5 md:h-5" />
+          <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-wide">Close</span>
         </button>
       </div>
 
