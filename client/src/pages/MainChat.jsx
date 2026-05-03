@@ -35,6 +35,7 @@ const MainChat = () => {
   // Text input state
   const [textInput, setTextInput] = useState('');
   const [isBotThinking, setIsBotThinking] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // --- EMOTION BUFFER ---
   // Collects the live emotion label from every /predict-frame response.
@@ -325,13 +326,23 @@ const MainChat = () => {
           onNewSession={handleNewSession}
           onLoadSession={handleLoadSession}
           onSessionDeleted={handleDeleteActiveSession}
+          isMobileOpen={isMobileMenuOpen}
+          setIsMobileOpen={setIsMobileMenuOpen}
         />
 
         <div className="flex-1 flex flex-col relative h-full">
           <div className="h-10 border-b border-gray-100 flex items-center justify-between px-4 bg-white shrink-0">
-            <h2 className="font-semibold text-sm text-gray-800">
-              {sessionStarted ? "Current Session" : "Welcome"}
-            </h2>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="md:hidden p-1 -ml-1 rounded-md hover:bg-gray-100 text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+              </button>
+              <h2 className="font-semibold text-sm text-gray-800">
+                {sessionStarted ? "Current Session" : "Welcome"}
+              </h2>
+            </div>
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${isRecording ? 'bg-red-500 animate-ping' : 'bg-green-500'}`}></span>
               <span className="text-[10px] uppercase font-bold text-gray-500">

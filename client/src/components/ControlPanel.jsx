@@ -4,14 +4,14 @@ import { Play, Pause, Send, RotateCcw, XCircle } from 'lucide-react';
 // [CHECK] Ensure 'isRecording' is in this list
 const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClose }) => {
   
-  const baseBtnClass = "flex flex-col items-center gap-1 px-6 py-2 rounded-lg transition-all active:scale-95 border";
+  const baseBtnClass = "flex flex-col items-center gap-1 px-4 md:px-6 py-2 rounded-lg transition-all active:scale-95 border";
 
   // Active = Dark Gray | Inactive = Transparent
   const activeBtnClass = `${baseBtnClass} bg-gray-200 text-gray-900 border-gray-300 shadow-inner`;
   const inactiveBtnClass = `${baseBtnClass} bg-transparent text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-700`;
 
   return (
-    <div className="flex items-center justify-center gap-4 mb-2 bg-white rounded-xl shadow-sm border border-gray-100 w-full">
+    <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 mb-2 bg-white rounded-xl shadow-sm border border-gray-100 w-full py-2 px-1 md:px-0">
       
       {/* GROUP 1 */}
       <div className="flex gap-2">
@@ -36,19 +36,19 @@ const ControlPanel = ({ isRecording, onStart, onPause, onEnter, onRetake, onClos
         </button>
       </div>
 
-      <div className="h-8 w-[1px] bg-gray-200"></div>
+      <div className="hidden md:block h-8 w-[1px] bg-gray-200"></div>
 
       {/* GROUP 2 */}
       <button 
         onClick={onEnter} 
-        className="flex flex-col items-center gap-1 bg-[#10a37f] text-white hover:bg-[#0d8a6c] px-10 py-2 rounded-lg transition-all active:scale-95 shadow-md mx-2"
+        className="flex flex-col items-center gap-1 bg-[#10a37f] text-white hover:bg-[#0d8a6c] px-8 md:px-10 py-2 rounded-lg transition-all active:scale-95 shadow-md mx-1 md:mx-2"
         title="Translate Signs"
       >
         <Send size={20} />
         <span className="text-[10px] font-bold uppercase tracking-wide">Enter</span>
       </button>
 
-      <div className="h-8 w-[1px] bg-gray-200"></div>
+      <div className="hidden md:block h-8 w-[1px] bg-gray-200"></div>
 
       {/* GROUP 3 */}
       <div className="flex gap-2">
