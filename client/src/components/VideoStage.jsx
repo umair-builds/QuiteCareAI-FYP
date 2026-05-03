@@ -134,10 +134,16 @@ const VideoStage = ({ isRecording, onGlossDetected, onEmotionDetected, botRespon
 
   // Trigger animation when botResponseCount changes
   useEffect(() => {
-    if (botResponseCount > 0 && signSequence && signSequence.length > 0) {
-      playSequence(signSequence);
+    if (botResponseCount > 0) {
+      // We are forcing PLACEHOLDER MODE because the R2 bucket is missing most vocabulary videos.
+      // E.g. 'hello', 'happy', 'reach' are NOT uploaded to R2 yet.
+      const randomSigns = Array.from({ length: 5 }, () =>
+        FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)]
+      );
+
+      playSequence(randomSigns);
     }
-  }, [botResponseCount, signSequence]);
+  }, [botResponseCount]);
 
   const playSequence = (signs) => {
     console.log("Starting Animation Sequence:", signs);
