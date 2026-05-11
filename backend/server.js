@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const passport = require('passport');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use(cors({
 );
 
 app.use(express.json());
+app.use(passport.initialize());
 
 // --- 1. FAVICON & STATIC ASSET HANDLER ---
 // Handle favicon requests early to avoid unnecessary DB connection attempts
@@ -78,10 +80,12 @@ app.use(async (req, res, next) => {
 
 // --- 4. API ROUTES ---
 const authRoutes = require('./routes/authRoutes');
+const oauthRoutes = require('./routes/oauthRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const testRoutes = require('./routes/testRoutes');
 
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', oauthRoutes); // Mount OAuth routes
 app.use('/api/chat', chatRoutes);
 app.use('/api/test', testRoutes);
 
