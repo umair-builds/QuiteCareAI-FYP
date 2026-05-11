@@ -15,6 +15,7 @@ import SignUp from './pages/SignUp';
 import MainChat from './pages/MainChat';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import AuthSuccess from './pages/AuthSuccess';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthRoute from './components/AuthRoute';
@@ -47,6 +48,7 @@ function App() {
         } />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/success" element={<AuthSuccess />} />
       </Routes>
     </>
   );
