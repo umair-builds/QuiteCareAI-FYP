@@ -32,6 +32,9 @@ const MainChat = () => {
   // Track how many times bot has responded
   const [responseCount, setResponseCount] = useState(0);
 
+  // Index of the gloss word currently being signed by the avatar (-1 = idle)
+  const [activeSignIndex, setActiveSignIndex] = useState(-1);
+
   // Text input state
   const [textInput, setTextInput] = useState('');
   const [isBotThinking, setIsBotThinking] = useState(false);
@@ -121,8 +124,9 @@ const MainChat = () => {
     setCurrentGlosses([]);
     setIsAiOutput(false);
     setResponseCount(0);
+    setActiveSignIndex(-1);
     setCurrentChatId(null);
-    setChatTitle("New Sign Session"); // [UPDATED]
+    setChatTitle("New Sign Session");
     setMessages([{ sender: 'bot', text: 'Hello! Press START to begin signing.' }]);
   };
 
@@ -193,6 +197,7 @@ const MainChat = () => {
     setIsRecording(false);
     setIsAiOutput(false);
     setCurrentGlosses([]);
+    setActiveSignIndex(-1);
   };
 
   const handleCloseSession = () => {
@@ -361,6 +366,7 @@ const MainChat = () => {
                     onEmotionDetected={(emotion) => setEmotionBuffer(prev => [...prev, emotion])}
                     botResponseCount={responseCount}
                     signSequence={currentGlosses}
+                    onActiveSignChange={(idx) => setActiveSignIndex(idx)}
                   />
 
                   {/* EMOTION CHIP — subtle, matches app theme */}
@@ -384,29 +390,46 @@ const MainChat = () => {
                     </div>
                   )}
 
-                  <div className="mb-2 text-center px-1 md:px-4">
+                  {/* ── GLOSS BAR ─────────────────────────────────────────────── */}
+                  <div className="mb-2 px-1 md:px-4">
                     {isRecording ? (
-                      <span className="bg-blue-50 text-blue-700 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border border-blue-100 block w-full min-h-[35px] flex items-center justify-center">
-                        {currentGlosses.length > 0 ? currentGlosses.join(" ") : "Waiting for signs..."}
+                      /* Recording: single live readout */
+                      <span className="bg-blue-50 text-blue-700 px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border border-blue-100 flex items-center justify-center w-full min-h-[35px]">
+                        {currentGlosses.length > 0 ? currentGlosses.join(' ') : 'Waiting for signs...'}
                       </span>
+                    ) : isAiOutput ? (
+                      /* AI is responding: word-chip bar with live highlight */
+                      <div className="flex flex-wrap justify-center gap-1.5 min-h-[35px] items-center px-1 py-1 rounded-lg bg-gray-50 border border-gray-200">
+                        {currentGlosses.length > 0 ? (
+                          currentGlosses.map((word, idx) => (
+                            <span
+                              key={idx}
+                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-mono font-bold transition-all duration-300 ${
+                                idx === activeSignIndex
+                                  ? 'bg-emerald-500 text-white shadow-md scale-110'
+                                  : 'bg-white text-gray-500 border border-gray-200'
+                              }`}
+                            >
+                              {word.toUpperCase()}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-gray-400 font-mono">No gloss sequence</span>
+                        )}
+                      </div>
                     ) : (
+                      /* Idle / user edit mode: editable text field */
                       <div className="relative w-full">
                         <input
                           type="text"
-                          value={currentGlosses.join(" ")}
+                          value={currentGlosses.join(' ')}
                           onChange={handleManualEdit}
-                          disabled={isAiOutput}
-                          placeholder={isAiOutput ? "AI Response (Click Start to reply)" : "Type or correct signs here..."}
-                          className={`w-full px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border focus:outline-none text-center transition-all ${isAiOutput
-                            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-                            : 'bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500'
-                            }`}
+                          placeholder="Type or correct signs here..."
+                          className="w-full px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-bold shadow-sm border bg-white text-gray-800 border-blue-300 focus:ring-2 focus:ring-blue-500 focus:outline-none text-center transition-all"
                         />
-                        {!isAiOutput && (
-                          <span className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
-                            EDIT MODE
-                          </span>
-                        )}
+                        <span className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 font-sans pointer-events-none">
+                          EDIT MODE
+                        </span>
                       </div>
                     )}
                   </div>
