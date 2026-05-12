@@ -35,11 +35,11 @@ app.use(passport.initialize());
 // Handle favicon requests early to avoid unnecessary DB connection attempts
 app.get(['/favicon.ico', '/favicon.png'], (req, res) => res.status(204).end());
 
-// --- 2. CACHED DATABASE CONNECTION ---
-let cachedDb = null;
-
+// --- 2. SERVERLESS-SAFE DATABASE CONNECTION ---
 const connectToDatabase = async () => {
-  if (cachedDb) return cachedDb; // Reuse connection
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection; // Reuse active connection
+  }
 
   const MONGODB_URI = process.env.MONGODB_URI;
   if (!MONGODB_URI) {
@@ -48,10 +48,9 @@ const connectToDatabase = async () => {
   }
 
   try {
-    const db = await mongoose.connect(MONGODB_URI);
-    cachedDb = db;
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ MongoDB Connected');
-    return db;
+    return mongoose.connection;
   } catch (err) {
     console.error('❌ MongoDB Connection Error:', err.message);
     throw err;
@@ -97,5 +96,11 @@ if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5005;
   app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 }
+
+// Global Error Handler for Vercel debugging
+app.use((err, req, res, next) => {
+  console.error("Global Error Handler Caught:", err);
+  res.status(500).send(`Internal Server Error: ${err.message || err}`);
+});
 
 module.exports = app;
