@@ -6,9 +6,9 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 // If BACKEND_URL is missing, fallback to FRONTEND_URL since Vercel hosts both on the same domain
-const BACKEND_URL = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5005';
+const BACKEND_URL = (process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5005').replace(/\/$/, '');
 
 // Generate JWT token (matches authController.js)
 const generateToken = (id) => {
