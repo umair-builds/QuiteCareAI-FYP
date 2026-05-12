@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5005';
 
 // Generate JWT token (matches authController.js)
 const generateToken = (id) => {
@@ -64,12 +65,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        // Automatically determine if we are local or in production via the hostname
-        // but it's safer to use an env variable for the backend base URL or let the client request specify
-        // For Vercel, it's easiest to let Passport use a relative or dynamically built callback URL,
-        // or hardcode it in ENV. We'll use a dynamic approach.
-        callbackURL: '/api/auth/google/callback',
-        proxy: true // Trust the proxy (Vercel) to build the correct callback URL (https)
+        callbackURL: `${BACKEND_URL}/api/auth/google/callback`,
+        proxy: true
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -90,7 +87,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
       {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        callbackURL: '/api/auth/github/callback',
+        callbackURL: `${BACKEND_URL}/api/auth/github/callback`,
         proxy: true
       },
       async (accessToken, refreshToken, profile, done) => {
