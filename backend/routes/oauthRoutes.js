@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5005';
+// If BACKEND_URL is missing, fallback to FRONTEND_URL since Vercel hosts both on the same domain
+const BACKEND_URL = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5005';
 
 // Generate JWT token (matches authController.js)
 const generateToken = (id) => {
