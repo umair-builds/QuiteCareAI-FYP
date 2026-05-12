@@ -16,7 +16,13 @@ const BACKEND_URL =
 
 export const API_BASE = BACKEND_URL;
 
+// VIDEO_BASE_URL switches between local storage (phase-3 evaluation) and Cloudflare R2 (production).
+// Phase 3 local:  set VITE_USE_LOCAL_VIDEOS=true in .env.local  → serves from client/public/videos/
+// Main branch:    leave VITE_USE_LOCAL_VIDEOS unset              → streams from Cloudflare R2 CDN
 export const R2_URL = "https://pub-c4751c4c00514714b4e7a941dd0d90d1.r2.dev/animations";
+export const VIDEO_BASE_URL = import.meta.env.VITE_USE_LOCAL_VIDEOS === 'true'
+  ? '/videos'
+  : R2_URL;
 
 export const AI_ENGINE_URL =
   import.meta.env.VITE_AI_ENGINE_URL || 'http://localhost:8000';
