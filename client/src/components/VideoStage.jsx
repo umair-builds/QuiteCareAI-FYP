@@ -3,6 +3,7 @@ import { Camera, Bot, Activity } from 'lucide-react';
 import axios from 'axios';
 import { VIDEO_BASE_URL, AI_ENGINE_URL } from '../services/api';
 import { prefetchVideos } from '../utils/prefetch';
+import { validSigns } from '../utils/validSigns';
 
 // --- ASSETS ---
 import welcomeVideo from '../assets/welcome.mp4';
@@ -139,14 +140,6 @@ const VideoStage = ({
   // 🔵 SECTION 2: AVATAR ANIMATION ENGINE (DOUBLE BUFFER)
   // =========================================================
 
-  /**
-   * Build a resolved video URL from a raw gloss word.
-   * All filenames are stored in lowercase (e.g. happy.mp4, we.mp4).
-   * Words that are not available will produce a 404 – the loop skips them.
-   */
-  const resolveUrl = (word) =>
-    `${VIDEO_BASE_URL}/${encodeURIComponent(word.toLowerCase().trim())}.mp4`;
-
   // Fire whenever the bot sends a new response
   useEffect(() => {
     if (botResponseCount > 0 && signSequence && signSequence.length > 0) {
@@ -159,8 +152,23 @@ const VideoStage = ({
 
     console.log('[Avatar] Starting sequence:', signs);
 
+    const usedRandoms = new Set();
+    const existingSigns = signs.map(s => s.toLowerCase().trim()).filter(s => validSigns.includes(s));
+
     // Build resolved URL list (lowercase filenames)
-    const playlist = signs.map(resolveUrl);
+    const playlist = signs.map(word => {
+      const cleanWord = word.toLowerCase().trim();
+      if (validSigns.includes(cleanWord)) {
+        return `${VIDEO_BASE_URL}/${encodeURIComponent(cleanWord)}.mp4`;
+      } else {
+        // Pick a random valid sign that is NOT in the current sentence and NOT already used
+        let candidates = validSigns.filter(s => !existingSigns.includes(s) && !usedRandoms.has(s));
+        if (candidates.length === 0) candidates = validSigns; // fallback if exhausted
+        const randomSign = candidates[Math.floor(Math.random() * candidates.length)];
+        usedRandoms.add(randomSign);
+        return `${VIDEO_BASE_URL}/${encodeURIComponent(randomSign)}.mp4`;
+      }
+    });
 
     // Prefetch first few URLs so they are already in cache when needed
     prefetchVideos(playlist);
@@ -305,7 +313,6 @@ const VideoStage = ({
           autoPlay
           playsInline
           muted
-          loop
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
             isAnimating ? 'opacity-0' : 'opacity-100'
           }`}

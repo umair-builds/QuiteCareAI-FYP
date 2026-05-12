@@ -10,6 +10,7 @@ import Sidebar from '../components/Sidebar';
 import VideoStage from '../components/VideoStage';
 import ControlPanel from '../components/ControlPanel';
 import ChatLog from '../components/ChatLog';
+import { validSigns } from '../utils/validSigns';
 
 const MainChat = () => {
   const { user } = useSelector((state) => state.auth);
@@ -401,18 +402,25 @@ const MainChat = () => {
                       /* AI is responding: word-chip bar with live highlight */
                       <div className="flex flex-wrap justify-center gap-1.5 min-h-[35px] items-center px-1 py-1 rounded-lg bg-gray-50 border border-gray-200">
                         {currentGlosses.length > 0 ? (
-                          currentGlosses.map((word, idx) => (
-                            <span
-                              key={idx}
-                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-mono font-bold transition-all duration-300 ${
-                                idx === activeSignIndex
-                                  ? 'bg-emerald-500 text-white shadow-md scale-110'
-                                  : 'bg-white text-gray-500 border border-gray-200'
-                              }`}
-                            >
-                              {word.toUpperCase()}
-                            </span>
-                          ))
+                          currentGlosses.map((word, idx) => {
+                            const cleanWord = word.toLowerCase().trim();
+                            const isValid = validSigns.includes(cleanWord);
+                            const isActive = idx === activeSignIndex;
+                            const activeClass = isValid ? 'bg-emerald-500 text-white shadow-md scale-110' : 'bg-green-800 text-white shadow-md scale-110';
+                            
+                            return (
+                              <span
+                                key={idx}
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-mono font-bold transition-all duration-300 ${
+                                  isActive
+                                    ? activeClass
+                                    : 'bg-white text-gray-500 border border-gray-200'
+                                }`}
+                              >
+                                {word.toUpperCase()}
+                              </span>
+                            );
+                          })
                         ) : (
                           <span className="text-[10px] text-gray-400 font-mono">No gloss sequence</span>
                         )}

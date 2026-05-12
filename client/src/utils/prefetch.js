@@ -1,21 +1,18 @@
 /**
  * Utility to prefetch videos to the browser cache for zero-latency transitions.
- * Creates hidden <link rel="preload"> elements or uses fetch to cache them.
+ * Accepts an array of fully-resolved video URLs (not raw sign words).
+ * URL generation is centralised in VideoStage.jsx to avoid format mismatches.
  */
-import { R2_URL } from '../services/api';
+export const prefetchVideos = (urlsArray) => {
+  if (!urlsArray || urlsArray.length === 0) return;
 
-export const prefetchVideos = (signsArray) => {
-  if (!signsArray || signsArray.length === 0) return;
-  
-  // Cache the next 2-3 signs
-  const toPrefetch = signsArray.slice(0, 3);
-  
-  toPrefetch.forEach(sign => {
-    if (!sign) return;
-    
-    const videoUrl = `${R2_URL}/${sign}.mp4`;
-    
-    // Create a preload link if it doesn't exist
+  // Prefetch the first 3 URLs
+  const toPrefetch = urlsArray.slice(0, 3);
+
+  toPrefetch.forEach(videoUrl => {
+    if (!videoUrl) return;
+
+    // Create a preload link if it doesn't already exist
     let link = document.querySelector(`link[href="${videoUrl}"]`);
     if (!link) {
       link = document.createElement('link');
